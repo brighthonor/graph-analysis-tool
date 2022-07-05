@@ -11,6 +11,10 @@
 #include "basicstat.h"
 #include "connectstat.h"
 #include "countstat.h"
+#include "eigencentrality.h"
+#include "biconnected.h"
+#include "closenesscentrality.h"
+#include "betweennesscentrality.h"
 
 // graph parsing
 #include "parse.h"

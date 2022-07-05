@@ -2,7 +2,6 @@
 #include <getopt.h>
 #include "snugal.h"
 
-
 void usage(void);
 
 
@@ -102,6 +101,9 @@ int main(int argc, char* argv[])
         snu::StatResult result;
         snu::initStat(result);
         snu::basicStat(graph, result);
+        snu::eigenCentrality(graph, result);
+        snu::closenessCentrality(graph, result);
+        snu::betweennessCentrality(graph, result);
         snu::connectStat(graph, result);
 
         snu::Plot plot(graph_name);
@@ -140,6 +142,10 @@ int main(int argc, char* argv[])
         snu::initStat(result);
         snu::basicStat(graph, result);
         snu::connectStat(graph, result);
+        snu::eigenCentrality(graph, result);
+        snu::biconnectedComponents(graph, result);
+        snu::closenessCentrality(graph, result);
+        snu::betweennessCentrality(graph, result);
         snu::countStat(graph, result);
 
         snu::Plot plot(graph_name);

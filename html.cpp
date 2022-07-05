@@ -79,6 +79,44 @@ namespace snu {
                         <p> size of largest weakly connected component = %lld </p>\
                     </h3>\
                 ", result.num_scc, result.size_lscc, result.num_wcc, result.size_lwcc);
+
+            if (result.eigencentralitystat) {
+                fprintf(fp, "\
+                    <h2>\
+                        Eigenvector Centrality Statistics\
+                    </h2>\
+                    <h3>");
+                if (result.eigencentrality_converged) {
+                    fprintf(fp, "<p> max eigenvector centrality value = %lf at ID = %lld </p>",
+                            result.max_eigencentrality, result.max_eigencentrality_id);
+                } else {
+                    fprintf(fp, "<p> eigenvector centrality failed to converge. </p>");
+                }
+                if (result.pagerank_converged) {
+                    fprintf(fp, "<p> max PageRank value = %lf at ID = %lld </p>",
+                            result.max_pagerank, result.max_pagerank_id);
+                } else {
+                    fprintf(fp, "<p> PageRank failed to converge. </p>");
+                }
+                if (result.katz_centrality_computed) {
+                    fprintf(fp, "<p> max katz centrality value = %lf at ID = %lld </p>",
+                            result.max_katz_centrality, result.max_katz_centrality_id);
+                }
+                fprintf(fp, "</h3>");
+            }
+
+            if (result.biconnectedstat)
+                fprintf(fp, "\
+                    <h2>\
+                        Biconnected Component Statistics\
+                    </h2>\
+                    <h3>\
+                        <p> number of articulation points (ARP) = %lld </p>\
+                        <p> number of biconnected components (BCC) = %lld </p>\
+                        <p> size of largest biconnected component = %lld </p>\
+                        <p> maximum number of BCC's connected to a single ARP = %lld </p>\
+                    </h3>\
+                ", result.num_arp, result.num_bcc, result.size_lbcc, result.max_conn_bcc);
         //}
 
         if (plot.makeplot)
@@ -176,7 +214,64 @@ namespace snu {
                         <p> approximate diameter (largest distance of all shortest path) = %lld </p>\
                     </h3>\
                 ", result.num_cc, result.size_lcc, result.diameter);
-    
+
+            if (result.eigencentralitystat) {
+                fprintf(fp, "\
+                        <h2>\
+                            Eigenvector Centrality Statistics\
+                        </h2>\
+                        <h3>");
+                if (result.eigencentrality_converged) {
+                    fprintf(fp, "<p> max eigenvector centrality value = %lf at ID = %lld </p>",
+                            result.max_eigencentrality, result.max_eigencentrality_id);
+                } else {
+                    fprintf(fp, "<p> eigenvector centrality failed to converge. </p>");
+                }
+                if (result.pagerank_converged) {
+                    fprintf(fp, "<p> max PageRank value = %lf at ID = %lld </p>",
+                            result.max_pagerank, result.max_pagerank_id);
+                } else {
+                    fprintf(fp, "<p> PageRank failed to converge. </p>");
+                }
+                if (result.katz_centrality_computed) {
+                    fprintf(fp, "<p> max Katz centrality value = %lf at ID = %lld </p>",
+                            result.max_katz_centrality, result.max_katz_centrality_id);
+                }
+                fprintf(fp, "</h3>");
+            }
+            if (result.biconnectedstat) {
+                fprintf(fp, "\
+                    <h2>\
+                        Biconnected Component Statistics\
+                    </h2>\
+                    <h3>\
+                        <p> number of articulation points (ARP) = %lld </p>\
+                        <p> number of biconnected components (BCC) = %lld </p>\
+                        <p> size of largest biconnected component = %lld </p>\
+                        <p> maximum number of BCC's connected to a single ARP = %lld </p>\
+                    </h3>\
+                ", result.num_arp, result.num_bcc, result.size_lbcc, result.max_conn_bcc);
+            }
+            if (result.closenessstat) {
+                fprintf(fp, "\
+                    <h2>\
+                        Closeness Centrality Statistics\
+                    </h2>\
+                    <h3>\
+                        <p> max closeness centrality value = %lf at ID = %lld </p>\
+                    </h3>",
+                            result.max_closeness_centrality, result.max_closeness_centrality_id);
+            }
+            if (result.betweennessstat) {
+                fprintf(fp, "\
+                    <h2>\
+                        Betweenness Centrality Statistics\
+                    </h2>\
+                    <h3>\
+                        <p> max betweenness centrality value = %lf at ID = %lld </p>\
+                    </h3>",
+                            result.max_betweenness_centrality, result.max_betweenness_centrality_id);
+            }
             if (result.countstat)
                 fprintf(fp, "\
                     <h2>\
