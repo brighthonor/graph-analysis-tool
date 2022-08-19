@@ -1,74 +1,131 @@
 #ifndef STAT_H
 #define STAT_H
 
+#include "graph.h"
+
+/*
+ * --- Class Stat ---
+ * CommonStat / DirectedStat / UndirectedStat
+ *
+ * Analyze stats for a given graph, then store its results.
+ * Stored results can be written to an HTML file using 'writeToHTML(...)'
+ * or exported to a separate file using 'writeToFile(...)'
+ *
+ * --- BASIC USAGE ---
+ *
+ * calculate() -> writeToHTML() or writeToFile()
+ *
+ *
+ * --- HOW TO CREATE A NEW STAT ---
+ *
+ * 1. Determine base class to derive from
+ *    - DirectedStat: The stat can only be calculated for directed graphs
+ *    - UndirectedStat: The stat can only be calculated for undirected graphs
+ * 		- CommonStat: The stat can be calculated for both directed and undirected graphs
+ *
+ * 2. Create a new class that inherits the chosen base class
+ * 		- refer to 'ClosenessCentrality.h' for an example
+ *
+ * 3. Override 'statName()' to return a name for the stat
+ * 		- used for debug logging purposes.
+ *
+ * 4. Override 'calculateStat(...)' to analyze the graph and store the results
+ * 		in the class's private members.
+ * 		(Name of the function to override can vary depending on the base class - check list below)
+ * 		- CommonStat:			calculateStat()
+ * 		- DirectedStat: 	calculateDirectedStat()
+ * 		- UndirectedStat: calculateUndirectedStat()
+ *
+ * 5. Override 'writeToHTMLStat(...)' to write results into an HTML file.
+ * 		- Note that basic header/footer can be omitted.
+ * 			writeToHTML() only writes a portion of the whole HTML file.
+ *
+ * 6. Override 'writeToFileStat(...)' to write results into a separate file. (optional)
+ * 		- Useful for unit testing.
+ * 		- For centrality measures, testers/test_centrality.py can be used for comparison with
+ * 			SNAP. (stanford's graph analysis library)
+ *
+ * 7. Add the new stat to a StatAnalyzer
+ * 		- StatAnalyzer will call 'calculate(...) & writeToFile(...)' for the input graph.
+ * 		- currently being handled at main.cpp (2022.07.04)
+ * 		- (at main.cpp) add to 'common_stats' or 'directed_only_stats' or 'undirected_only_stats'
+ *
+ * 8. Add the new stat to HTML
+ * 		- currently being handled at main.cpp (2022.07.04)
+ * 		- (at main.cpp) add to 'html_order'
+ *
+ */
+
 namespace snu {
+class Stat {
+public:
+    // Name of the stat used for filenames, logs ...
+    virtual std::string statName() = 0;
 
-	typedef struct StatResult {
-		long long size; // number of vertices
-		long long volume; // number of edges
-		long long num_vlabel; // number of vertex label
-		long long num_elabel; // number of edge label
-		double density; // m / n^2, directed graph with loops
-		double avg_degree; // average degree, 2m / n
-		long long max_degree; // maximum degree
-		long long max_indegree; // maximum indegree
-		long long max_outdegree; // maximum outdegree
-		// size of vertex label is defined as number of vertices having that label
-		long long max_vlabel_size; // maximum size of vertex label
-		long long max_elabel_size; // maximum size of edge label
-		double reciprocity; // only defined in directed graph
-		double negativity; // ratio of nagative edges
+    // Has the stat been successfully analyzed?
+    // Contains result from calculate(...)
+    bool getSuccess();
 
-		// connectivity statistics 
-		long long num_cc; // number of connected components
-		long long num_scc; // number of strongly connected components
-		long long num_wcc; // number of weakly connected components
-		long long size_lcc; // largest size of connected components
-		long long size_lscc; // largest size of strongly connected components
-		long long size_lwcc; // largest size of weakly connected components
-		long long diameter; // longest shortest paths
+    // Append analysis result information to an HTML file.
+    void writeToHTML(FILE *fp, bool directed);
 
-        // eigencentrality
-        bool pagerank_converged = false; // whether pagerank converged
-        double max_pagerank; // maximum pagerank value
-        long long max_pagerank_id; // id of max pagerank value vertex
-        bool eigencentrality_converged = false; // whether eigencentrality converged
-        double max_eigencentrality; // maximum eigencentrality value
-        long long max_eigencentrality_id; // id of max eigencentrality vertex
-        bool katz_centrality_computed = false; // whether katz centrality was computed
-        double max_katz_centrality; // maximum katz centrality value
-        long long max_katz_centrality_id; // id of max katz centrality vertex
+    // Write results into a separate file. (Optional)
+    // Used for unit testing purposes.
+    // This method is optional - just return false to skip this operation. (don't override)
+    // return value: true  - if this operation wrote to a file.
+    //               false - if this operation was skipped.
+    bool writeToFile(std::string graph_name, bool directed);
 
-        // biconnected components and articulation points
-        long long num_arp; // number of articulation points
-        long long num_bcc; // number of biconnected components
-        long long max_conn_bcc; // maximum number of bcc's connected to a single arp
-        long long size_lbcc; // largest size of biconnected components
+    // Analyze the graph and store the results.
+    // - Implemented in derived classes.
+    // bool calculate(Graph &graph)
 
-		// closeness centrality
-		double max_closeness_centrality; // maximum closeness centrality value
-		long long max_closeness_centrality_id; // id of max closeness centrality vertex
+protected:
+    // Override this function to set behaviour of 'writeToHTML(...)'
+    virtual void writeToHTMLStat(FILE *fp, bool directed) = 0;
 
-		// betweenness centrality
-		double max_betweenness_centrality; // maximum betweenness centrality value
-		long long max_betweenness_centrality_id; // id of max betweenness centrality vertex
+    // Override this function to set behaviour of 'writeToFile(...)'
+    virtual bool writeToFileStat(std::string graph_name, bool directed) { return false; }
+    bool success = false;
+};
 
-		// counting statistics 
-		unsigned long long wedge_count; // number of wedges
-		unsigned long long claw_count; // number of claws
-		unsigned long long triangle_count; // number of triangles
+// stats that apply to both USGraph and DSGraph
+class CommonStat : public Stat {
+public:
+    // Analyze the graph and store the results.
+    // param verify: whether to check the results
+    // return value: true on success (if verification is enabled, true if verification passes)
+    bool calculate(Graph &graph, bool verify);
 
-		// statistic check
-		bool basicstat = false;
-		bool connectstat = false;
-        bool eigencentralitystat = false;
-        bool biconnectedstat = false;
-		bool countstat = false;
-		bool closenessstat = false;
-		bool betweennessstat = false;
-	} StatResult;
+protected:
+    // Override this function to set behaviour of 'calculate(...)'
+    virtual bool calculateStat(Graph &graph, bool verify) = 0;
+};
 
-	void initStat(StatResult& result);
-}
+// stats that apply to only DSGraph
+class DirectedStat : public Stat {
+public:
+    // Analyze the graph and store the results.
+    // param verify: whether to check the results
+    // return value: true on success (if verification is enabled, true if verification passes)
+    bool calculateDirected(DSGraph &graph, bool verify);
 
-#endif // STAT_H
+protected:
+    // Override this function to set behaviour of 'calculateDirected(...)'
+    virtual bool calculateDirectedStat(DSGraph &graph, bool verify) = 0;
+};
+
+class UndirectedStat : public Stat {
+public:
+    // Analyze the graph and store the results.
+    // param verify: whether to check the results
+    // return value: true on success (if verification is enabled, true if verification passes)
+    bool calculateUndirected(USGraph &graph, bool verify);
+
+protected:
+    // Override this function to set behaviour of 'calculateUndirected(...)'
+    virtual bool calculateUndirectedStat(USGraph &graph, bool verify) = 0;
+};
+}  // namespace snu
+
+#endif  // STAT_H

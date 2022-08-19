@@ -7,23 +7,23 @@
 #include "graph.h"
 
 // graph analysis algorithms
-#include "stat.h"
 #include "basicstat.h"
+#include "betweennesscentrality.h"
+#include "biconnected.h"
+#include "closenesscentrality.h"
 #include "connectstat.h"
 #include "countstat.h"
 #include "eigencentrality.h"
-#include "biconnected.h"
-#include "closenesscentrality.h"
-#include "betweennesscentrality.h"
+#include "stat.h"
 
 // graph parsing
 #include "parse.h"
 
 // graph plots
-#include "plot.h"
 #include "makeplot.h"
+#include "plot.h"
 
 // make html file to show statistics
 #include "html.h"
 
-#endif // SNUGAL_H
+#endif  // SNUGAL_H

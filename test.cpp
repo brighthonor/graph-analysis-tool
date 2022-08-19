@@ -1,20 +1,17 @@
-#include <stdio.h>
 #include <getopt.h>
+#include <stdio.h>
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 #include <utility>
 
+#include "diameter.h"
 #include "graph.h"
 #include "parse.h"
-#include "diameter.h"
-
 
 typedef std::chrono::milliseconds milliseconds;
 
-
-void usage(void)
-{
+void usage(void) {
     printf(" usage: main <input file> [options]\n");
     printf("\n");
     printf("  options:\n");
@@ -27,8 +24,7 @@ void usage(void)
     return;
 }
 
-
-template<typename Ret, typename Func, typename ...Args>
+template <typename Ret, typename Func, typename... Args>
 milliseconds::rep measure(Ret&& ret, Func&& func, Args&&... args) {
     auto start = std::chrono::steady_clock::now();
     ret = std::forward<Func>(func)(std::forward<Args>(args)...);
@@ -37,9 +33,7 @@ milliseconds::rep measure(Ret&& ret, Func&& func, Args&&... args) {
     return std::chrono::duration_cast<milliseconds>(finish - start).count();
 }
 
-
-int main(int argc, char* argv[]) 
-{
+int main(int argc, char* argv[]) {
     if (argc < 2) {
         usage();
         return 1;
@@ -49,11 +43,10 @@ int main(int argc, char* argv[])
 
     while (true) {
         static struct option long_options[] = {
-            {"directed", 0, NULL, 'd'}, 
-            {"undirected", 0, NULL, 'u'}, 
-            {"help", 0, NULL, 'h'}, 
-            {0, 0, 0, 0}
-        };
+            {"directed", 0, NULL, 'd'},
+            {"undirected", 0, NULL, 'u'},
+            {"help", 0, NULL, 'h'},
+            {0, 0, 0, 0}};
 
         int option = getopt_long(argc, argv, "duh", long_options, NULL);
 
@@ -62,21 +55,21 @@ int main(int argc, char* argv[])
         }
 
         switch (option) {
-          case 'd':
-            directed = true;
-            break;
+            case 'd':
+                directed = true;
+                break;
 
-          case 'u':
-            directed = false;
-            break;
+            case 'u':
+                directed = false;
+                break;
 
-          case 'h':
-            usage();
-            return 0;
+            case 'h':
+                usage();
+                return 0;
 
-          default:
-            usage();
-            return 1;
+            default:
+                usage();
+                return 1;
         }
     }
 
@@ -101,75 +94,72 @@ int main(int argc, char* argv[])
         dot = input_path.length();
     }
 
-    std::string graph_name = input_path.substr(slash+1, dot-(slash+1));
+    std::string graph_name = input_path.substr(slash + 1, dot - (slash + 1));
 
     if (directed) {
         snu::DSGraph graph;
         int parse_status = snu::parseDSGraph(input_path, graph);
         switch (parse_status) {
-          case snu::PARSE_SUCCESS:
-            break;
+            case snu::PARSE_SUCCESS:
+                break;
 
-          case snu::PARSE_FAILURE_NO_INPUT:
-            fprintf(stderr, "input file is not locatable.\n");
-            return 1;
+            case snu::PARSE_FAILURE_NO_INPUT:
+                fprintf(stderr, "input file is not locatable.\n");
+                return 1;
 
-          case snu::PARSE_FAILURE_INVALID_INPUT:
-            fprintf(stderr, "input data is invalid.\n");
-            return 1;
+            case snu::PARSE_FAILURE_INVALID_INPUT:
+                fprintf(stderr, "input data is invalid.\n");
+                return 1;
 
-          case snu::PARSE_FAILURE_INVALID_FILETYPE:
-            fprintf(stderr, "this filetype is not supported.\n");
-            return 1;
+            case snu::PARSE_FAILURE_INVALID_FILETYPE:
+                fprintf(stderr, "this filetype is not supported.\n");
+                return 1;
 
-          case snu::PARSE_FAILURE_ADD_VERTEX:
-          case snu::PARSE_FAILURE_ADD_EDGE:
-            fprintf(stderr, "internal error\n");
-            return 1;
+            case snu::PARSE_FAILURE_ADD_VERTEX:
+            case snu::PARSE_FAILURE_ADD_EDGE:
+                fprintf(stderr, "internal error\n");
+                return 1;
 
-          default:
-            return 1;
+            default:
+                return 1;
         }
-    }
-    else {
+    } else {
         snu::USGraph graph;
         int parse_status = snu::parseUSGraph(input_path, graph);
         switch (parse_status) {
-          case snu::PARSE_SUCCESS:
-            break;
+            case snu::PARSE_SUCCESS:
+                break;
 
-          case snu::PARSE_FAILURE_NO_INPUT:
-            fprintf(stderr, "input file is not locatable.\n");
-            return 1;
+            case snu::PARSE_FAILURE_NO_INPUT:
+                fprintf(stderr, "input file is not locatable.\n");
+                return 1;
 
-          case snu::PARSE_FAILURE_INVALID_INPUT:
-            fprintf(stderr, "input data is invalid.\n");
-            return 1;
+            case snu::PARSE_FAILURE_INVALID_INPUT:
+                fprintf(stderr, "input data is invalid.\n");
+                return 1;
 
-          case snu::PARSE_FAILURE_INVALID_FILETYPE:
-            fprintf(stderr, "this filetype is not supported.\n");
-            return 1;
+            case snu::PARSE_FAILURE_INVALID_FILETYPE:
+                fprintf(stderr, "this filetype is not supported.\n");
+                return 1;
 
-          case snu::PARSE_FAILURE_ADD_VERTEX:
-          case snu::PARSE_FAILURE_ADD_EDGE:
-            fprintf(stderr, "internal error\n");
-            return 1;
+            case snu::PARSE_FAILURE_ADD_VERTEX:
+            case snu::PARSE_FAILURE_ADD_EDGE:
+                fprintf(stderr, "internal error\n");
+                return 1;
 
-          default:
-            return 1;
+            default:
+                return 1;
         }
 
         unsigned long long exact;
         milliseconds::rep exact_time = measure(exact, snu::diameter, graph);
-        
+
         unsigned long long approx;
         milliseconds::rep approx_time = measure(approx, snu::approximate_diameter, graph);
 
         printf("exact diameter  : %10llu (%10ld ms)\n", exact, exact_time);
         printf("approx. diameter: %10llu (%10ld ms)\n", approx, approx_time);
     }
-	
-	return 0;
+
+    return 0;
 }
-
-
