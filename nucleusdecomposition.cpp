@@ -18,12 +18,11 @@ void NucleusDecomposition::writeToHTMLStat(FILE *fp, bool directed) {
                 Nucleus Decomposition Statistics\
             </h2>\
             <h3>\
-                <p> size of vertices = %lld </p>\
                 <p> r = %lld </p>\
                 <p> s = %lld </p>\
             </h3>\
             ",
-            10, 3, 4);
+            3, 4);
 }
 
 bool NucleusDecomposition::writeToFileStat(std::string graph_name, bool directed) {

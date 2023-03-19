@@ -14,6 +14,21 @@ std::string Kclist::statName() {
     return "kclist";
 }
 
+std::vector<std::vector<Graph::Vid>> Kclist::getAllKCliques(USGraph &graph, unsigned k) {
+    createVidIndex(graph);
+    ordCore(graph);
+    reLabel(graph);
+
+    cliquek = k;
+    makeSpecial(graph, cliquek);
+
+    cliqueNumber = 0;
+    std::vector<Graph::Vid> tmp;
+    kclique(cliquek, &cliqueNumber, tmp);
+
+    return cliques;
+}
+
 bool Kclist::calculateUndirectedStat(USGraph &graph, bool verify) {
     bool success = true;
 

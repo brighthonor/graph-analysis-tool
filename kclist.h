@@ -12,6 +12,7 @@ namespace snu {
 class Kclist : public UndirectedStat {
    public:
     virtual std::string statName() override;
+    std::vector<std::vector<Graph::Vid>> getAllKCliques(USGraph &graph, unsigned k);
 
    protected:
     virtual bool calculateUndirectedStat(USGraph &graph, bool verify) override;

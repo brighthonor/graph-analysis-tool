@@ -1,6 +1,7 @@
 #ifndef NUCLEUSDECOMPOSITION_H
 #define NUCLEUSDECOMPOSITION_H
 
+#include <vector>
 #include "stat.h"
 
 namespace snu {
@@ -15,6 +16,9 @@ class NucleusDecomposition : public UndirectedStat {
 
    private:
     void test();
+
+    std::vector<std::vector<Graph::Vid>> rcliques;
+    std::vector<std::vector<Graph::Vid>> scliques;
 };
 }
 
