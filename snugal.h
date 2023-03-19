@@ -15,6 +15,8 @@
 #include "countstat.h"
 #include "eigencentrality.h"
 #include "stat.h"
+#include "nucleusdecomposition.h"
+#include "kclist.h"
 
 // graph parsing
 #include "parse.h"

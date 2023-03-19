@@ -113,6 +113,9 @@ int main(int argc, char *argv[]) {
     auto countStat = snu::CountStat();
     auto biconnectedComponents = snu::BiconnectedComponents();
 
+    auto kclist = snu::Kclist();
+    auto nucleusDecomposition = snu::NucleusDecomposition();
+
     /* -- Add Common Stats To Run (support both directed & undirected) -- */
     common_stats = {
         &basicStat,
@@ -129,6 +132,8 @@ int main(int argc, char *argv[]) {
     undirected_only_stats = {
         &countStat,
         &biconnectedComponents,
+        &kclist,
+        &nucleusDecomposition,
     };
 
     // run all stats using the graph
@@ -166,6 +171,8 @@ int main(int argc, char *argv[]) {
             &closenessCentrality,
             &betweennessCentrality,
             &countStat,
+            &kclist,
+            &nucleusDecomposition,
         };
     }
     for (auto stat : html_order) {
