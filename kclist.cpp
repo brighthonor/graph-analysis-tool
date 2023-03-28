@@ -24,9 +24,26 @@ std::vector<std::vector<Graph::Vid>> Kclist::getAllKCliques(USGraph &graph, unsi
 
     cliqueNumber = 0;
     std::vector<Graph::Vid> tmp;
-    kclique(cliquek, &cliqueNumber, tmp);
+    std::set<Graph::Vid> tmpset;
+    kclique(cliquek, &cliqueNumber, tmp, tmpset);
 
     return cliques;
+}
+
+std::vector<std::set<Graph::Vid>> Kclist::getAllKCliquesSet(USGraph &graph, unsigned int k) {
+    createVidIndex(graph);
+    ordCore(graph);
+    reLabel(graph);
+
+    cliquek = k;
+    makeSpecial(graph, cliquek);
+
+    cliqueNumber = 0;
+    std::vector<Graph::Vid> tmp;
+    std::set<Graph::Vid> tmpset;
+    kclique(cliquek, &cliqueNumber, tmp, tmpset);
+
+    return cliques_set;
 }
 
 bool Kclist::calculateUndirectedStat(USGraph &graph, bool verify) {
@@ -41,7 +58,8 @@ bool Kclist::calculateUndirectedStat(USGraph &graph, bool verify) {
 
     cliqueNumber = 0;
     std::vector<Graph::Vid> tmp;
-    kclique(cliquek, &cliqueNumber, tmp);
+    std::set<Graph::Vid> tmpset;
+    kclique(cliquek, &cliqueNumber, tmp, tmpset);
 
     return success;
 }
@@ -282,7 +300,7 @@ void Kclist::makeSpecial(USGraph &graph, unsigned char k) {
     lab = llab;
 }
 
-void Kclist::kclique(unsigned int l, unsigned long long *n, std::vector<Graph::Vid> &clq) {
+void Kclist::kclique(unsigned int l, unsigned long long *n, std::vector<Graph::Vid> &clq, std::set<Graph::Vid> &clqset) {
     unsigned i, j, k, end, u, v, w;
 
     if(l==2) {
@@ -290,17 +308,24 @@ void Kclist::kclique(unsigned int l, unsigned long long *n, std::vector<Graph::V
             u = sub[2][i];
 
             clq.push_back(idx_to_vid[u]);
+            clqset.insert(idx_to_vid[u]);
 
             end = cd[u] + d[2][u];
             for(j=cd[u]; j<end; j++) {
 
                 clq.push_back(idx_to_vid[adj[j]]);
+                clqset.insert(idx_to_vid[adj[j]]);
+
                 cliques.push_back(clq);
+                cliques_set.push_back(clqset);
+
                 clq.pop_back();
+                clqset.erase(idx_to_vid[adj[j]]);
 
                 (*n)++; // listing here!
             }
             clq.pop_back();
+            clqset.erase(idx_to_vid[u]);
         }
         return;
     }
@@ -330,10 +355,12 @@ void Kclist::kclique(unsigned int l, unsigned long long *n, std::vector<Graph::V
         }
 
         clq.push_back(idx_to_vid[u]);
+        clqset.insert(idx_to_vid[u]);
 
-        kclique(l-1, n, clq);
+        kclique(l-1, n, clq, clqset);
 
         clq.pop_back();
+        clqset.erase(idx_to_vid[u]);
 
         for(j=0; j<ns[l-1]; j++) { // restoring labels
             v = sub[l-1][j];

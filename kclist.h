@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <set>
 #include <queue>
 
 #include "graph.h"
@@ -13,6 +14,7 @@ class Kclist : public UndirectedStat {
    public:
     virtual std::string statName() override;
     std::vector<std::vector<Graph::Vid>> getAllKCliques(USGraph &graph, unsigned k);
+    std::vector<std::set<Graph::Vid>> getAllKCliquesSet(USGraph &graph, unsigned k);
 
    protected:
     virtual bool calculateUndirectedStat(USGraph &graph, bool verify) override;
@@ -24,6 +26,7 @@ class Kclist : public UndirectedStat {
     unsigned long long cliqueNumber;
 
     std::vector<std::vector<Graph::Vid>> cliques;
+    std::vector<std::set<Graph::Vid>> cliques_set;
 
     typedef struct {
         unsigned key;
@@ -51,7 +54,7 @@ class Kclist : public UndirectedStat {
     void ordCore(USGraph &graph);
     void reLabel(USGraph &graph);
     void makeSpecial(USGraph &graph, unsigned char k);
-    void kclique(unsigned l, unsigned long long *n, std::vector<Graph::Vid> &clq);
+    void kclique(unsigned l, unsigned long long *n, std::vector<Graph::Vid> &clq, std::set<Graph::Vid> &clqset);
 
     std::vector<unsigned> idx_to_vid;
     std::unordered_map<Graph::Vid, unsigned> vid_to_idx;

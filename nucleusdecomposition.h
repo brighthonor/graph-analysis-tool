@@ -2,6 +2,8 @@
 #define NUCLEUSDECOMPOSITION_H
 
 #include <vector>
+#include <set>
+#include "kclist.h"
 #include "stat.h"
 
 namespace snu {
@@ -15,10 +17,32 @@ class NucleusDecomposition : public UndirectedStat {
     virtual bool writeToFileStat(std::string graph_name, bool directed) override;
 
    private:
-    void test();
+    void nd();
+    void findRSCliques(USGraph &graph, int r, int s);
 
-    std::vector<std::vector<Graph::Vid>> rcliques;
-    std::vector<std::vector<Graph::Vid>> scliques;
+    struct subcore {
+        bool visible;
+        int rank;
+        int K;
+        int parent;
+        int root;
+        std::vector<int> children;
+        int size;
+        int nEdge;
+        double ed;
+    };
+
+    std::vector<std::set<Graph::Vid>> rcliques;
+    std::vector<std::set<Graph::Vid>> scliques;
+    std::vector<std::set<int>> scsHasr;
+    std::vector<std::set<int>> rcsIns;
+
+    int cid;
+    std::vector<subcore> skeleton;
+    std::vector<int> component;
+    std::vector<std::pair<int, int>> relations;
+    std::vector<int> unassigned;
+    int nSubcores;
 };
 }
 
