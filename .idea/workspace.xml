@@ -11,11 +11,10 @@
   </component>
   <component name="CMakeRunConfigurationManager">
     <generated>
-      <config projectName="graph_analysis_tool" targetName="pyplot" />
-      <config projectName="graph_analysis_tool" targetName="graph_analysis_tool" />
-      <config projectName="graph_analysis_tool" targetName="test" />
-      <config projectName="graph_analysis_tool" targetName="all" />
-      <config projectName="graph_analysis_tool" targetName="main" />
+      <config projectName="Project" targetName="test" />
+      <config projectName="Project" targetName="main" />
+      <config projectName="Project" targetName="all" />
+      <config projectName="Project" targetName="pyplot" />
     </generated>
   </component>
   <component name="CMakeSettings">
@@ -26,8 +25,6 @@
   <component name="ChangeListManager">
     <list default="true" id="134d201f-182f-4fb5-b915-b0daee736dfc" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kclist.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/kclist.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/kclist.h" beforeDir="false" afterPath="$PROJECT_DIR$/kclist.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/nucleusdecomposition.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/nucleusdecomposition.cpp" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/nucleusdecomposition.h" beforeDir="false" afterPath="$PROJECT_DIR$/nucleusdecomposition.h" afterDir="false" />
     </list>
@@ -64,26 +61,31 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,
-    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/sang/Documents/os/project-1-hello-process-team-19&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "ASKED_SHARE_PROJECT_CONFIGURATION_FILES": "true",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.cidr.known.project.marker": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "cf.first.check.clang-format": "false",
+    "cidr.known.project.marker": "true",
+    "last_opened_file_path": "/Users/sang/Desktop/urop/graph-analysis-tool",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager" selected="Makefile Application.main">
+    <configuration default="true" type="CLionExternalRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="CLION.EXTERNAL.BUILD" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="all" type="CLionNativeAppRunConfigurationType" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="graph-analysis-tool" TARGET_NAME="all" version="1" RUN_TARGET_PROJECT_NAME="graph_analysis_tool" RUN_TARGET_NAME="graph_analysis_tool">
       <method v="2">
         <option name="CLION.COMPOUND.BUILD" enabled="true" />
@@ -104,7 +106,7 @@
         <option name="CLION.COMPOUND.BUILD" enabled="true" />
       </method>
     </configuration>
-    <configuration name="graph_analysis_tool" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$PROJECT_DIR$/sample-data/lollipop.snap" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="graph_analysis_tool" TARGET_NAME="graph_analysis_tool" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/main">
+    <configuration name="graph_analysis_tool" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="$PROJECT_DIR$/sample-data/lollipop.snap" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Project" TARGET_NAME="graph_analysis_tool" CONFIG_NAME="Debug" RUN_PATH="$PROJECT_DIR$/main">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
       </method>
@@ -139,6 +141,7 @@
       <workItem from="1679334360895" duration="6000" />
       <workItem from="1679407495330" duration="79000" />
       <workItem from="1679923865548" duration="6026000" />
+      <workItem from="1679968627958" duration="3671000" />
     </task>
     <servers />
   </component>
