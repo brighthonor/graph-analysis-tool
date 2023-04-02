@@ -9,20 +9,9 @@ std::string NucleusDecomposition::statName() {
 bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) {
     bool success = true;
 
+    int max;
     findRSCliques(graph, 3, 4);
-    int index = 0;
-    for(auto &w: scsHasr){
-        printf("%d. vertices: ", index);
-        for(auto ww: rcliques[index]){
-            printf("%d ", ww);
-        } printf("\n");
-        for(auto ww: w) {
-            for(auto www: scliques[ww]){
-                printf("%d ", www);
-            } printf("\n");
-        } printf("\n");
-        index++;
-    }
+    nd(graph, &max);
 
     return success;
 }
@@ -53,7 +42,7 @@ NucleusDecomposition::Naive_Bucket_element::Naive_Bucket_element()
 {}
 
 NucleusDecomposition::Naive_Bucket::Naive_Bucket()
-: max_value(0), current_min_value(1), elements(NULL), buckets(NULL), values(NULL), nb_element(0)
+: max_value(0), current_min_value(1), elements(NULL), buckets(NULL), values(NULL), nb_elements(0)
 {}
 
 NucleusDecomposition::Naive_Bucket::~Naive_Bucket() {
@@ -111,7 +100,7 @@ void NucleusDecomposition::Naive_Bucket::Insert(int id, int value) {
 int NucleusDecomposition::Naive_Bucket::PopMin(int *id, int *ret_value) {
     for (; current_min_value <= max_value; current_min_value++) {
         if (buckets[current_min_value] != NULL) {
-            *id = buckets[current_min_value] - elements; // pointer arithmetic. finds the index of element that buckets[current_min_value] points to
+            *id = (int) (buckets[current_min_value] - elements); // pointer arithmetic. finds the index of element that buckets[current_min_value] points to
             buckets[current_min_value] = buckets[current_min_value]->next; // adjust the pointer to the new head of the list that has same degree elements
             if (buckets[current_min_value] != NULL)
                 buckets[current_min_value]->prev = NULL;
@@ -140,16 +129,14 @@ void NucleusDecomposition::Naive_Bucket::DecVal(int id) {
     return;
 }
 
+///////////////////////////////////////////////
 //////////// Nucleus Decomposition ////////////
-void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s) { // s should be always larger than r
-    if(s < r) {
-        int tmp = s;
-        s = r;
-        r = tmp;
-    }
+///////////////////////////////////////////////
 
-    Kclist *rclist = new Kclist();
-    Kclist *sclist = new Kclist();
+void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s) { // s should be always larger than r
+
+    auto *rclist = new Kclist();
+    auto *sclist = new Kclist();
 
     rcliques = rclist->getAllKCliquesSet(graph, r);
     scliques = sclist->getAllKCliquesSet(graph, s);
@@ -199,7 +186,7 @@ void NucleusDecomposition::nd(USGraph &graph, int *max) {
     while(true) {
         int t;
         int val;
-        if(nBucket.PopMin(t, val))
+        if(nBucket.PopMin(&t, &val))
             break;
 
         unassigned.clear();
@@ -209,22 +196,25 @@ void NucleusDecomposition::nd(USGraph &graph, int *max) {
         fc_t = K[t] = val;
 
         for(auto sc: scsHasr[t]) {
-            bool nv = false;
+            bool nv = true;
             for(auto rc: rcsIns[sc]) {
                 if(K[rc]!=-1){
-                    nv = true;
+                    nv = false;
                     break;
                 }
             }
 
             if(nv) {
                 for(auto rc: rcsIns[sc]) {
+                    if(rc==t) continue;
                     if(nBucket.CurrentValue(rc) > fc_t)
                         nBucket.DecVal(rc);
                 }
             }
             else {
+                rcsIns[sc].erase(t);
                 createSkeleton(t, rcsIns[sc]);
+                rcsIns[sc].insert(t);
             }
         }
 
@@ -301,7 +291,7 @@ void NucleusDecomposition::merge(int u, int v) {
 }
 
 void NucleusDecomposition::createSkeleton(int u, std::set<int> neighbors) {
-    int smallest = -1, minK = INT_MAX;
+    int smallest = -1, minK = INT32_MAX;
     for(auto i: neighbors) {
         if(K[i] != -1 && K[i] < minK) {
             smallest = i;
