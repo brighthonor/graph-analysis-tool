@@ -8,3 +8,5 @@ pyplot
 *.html
 *.png
 
+cmake-build-debug/
+.idea/
