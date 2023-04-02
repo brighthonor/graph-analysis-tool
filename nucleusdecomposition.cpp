@@ -177,7 +177,7 @@ void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s) { // s sh
     }
 }
 
-void NucleusDecomposition::nd(USGraph &graph, int *max34) {
+void NucleusDecomposition::nd(USGraph &graph, int *max) {
     int fc_t = 0;
 
     cid = 0;

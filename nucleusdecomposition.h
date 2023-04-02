@@ -17,7 +17,7 @@ class NucleusDecomposition : public UndirectedStat {
     virtual bool writeToFileStat(std::string graph_name, bool directed) override;
 
    private:
-    void nd();
+    void nd(USGraph &graph, int *max);
     void findRSCliques(USGraph &graph, int r, int s);
 
     // nd tree
