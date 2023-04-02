@@ -34,27 +34,29 @@ class NucleusDecomposition : public UndirectedStat {
     };
 
     // for nBucket (MinHeap)
-    struct KeyValue {
-        unsigned key;
-        unsigned value;
+    struct Naive_Bucket_element{
+        Naive_Bucket_element *prev;
+        Naive_Bucket_element *next;
+        Naive_Bucket_element();
     };
 
-    struct BHeap {
-        unsigned n_max;
-        unsigned n;
-        std::vector<unsigned> pt;
-        std::vector<KeyValue> kv;
-    };
+    struct Naive_Bucket {
+        Naive_Bucket_element **buckets;
+        Naive_Bucket_element *elements;
+        int nb_elements;
+        int max_value;
+        int *values;
+        int current_min_value;
 
-    struct BHeap *construct(unsigned n_max);
-    void swap(struct BHeap *heap, unsigned i, unsigned j);
-    void bubbleUp(struct BHeap *heap, unsigned i);
-    void bubbleDown(struct BHeap *heap);
-    void insert(struct BHeap *heap, struct KeyValue kv);
-    void update(struct BHeap *heap, unsigned key);
-    struct KeyValue popmin(struct BHeap *heap);
-    struct BHeap *makeHeap();
-    void freeHeap(struct BHeap *heap);
+        Naive_Bucket();
+        ~Naive_Bucket();
+        void Initialize(int max_v, int nb_element);
+        void Free ();
+        void Insert(int id, int value);
+        void DecVal(int id);
+        int PopMin(int* ret_id, int* ret_value);
+        int CurrentValue(int id);
+    };
 
     struct subcore {
         bool visible;
@@ -78,6 +80,14 @@ class NucleusDecomposition : public UndirectedStat {
             ed = -1;
         }
     };
+
+    void assignToRoot(int *ch);
+    void assignToRepresentative(int *ch);
+    void store(int uComp, int vComp);
+    void merge(int u, int v);
+    void createSkeleton(int u, std::set<int> neighbors);
+    void updateUnassigned(int t);
+    void buildHierarchy(int cn, int nEdge, int nVtx);
 
     std::vector<std::set<Graph::Vid>> rcliques;
     std::vector<std::set<Graph::Vid>> scliques;
