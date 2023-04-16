@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <set>
+#include <stack>
+#include <queue>
 #include "kclist.h"
 #include "stat.h"
 
@@ -88,6 +90,13 @@ class NucleusDecomposition : public UndirectedStat {
     void createSkeleton(int u, std::set<int> neighbors);
     void updateUnassigned(int t);
     void buildHierarchy(int cn, int nEdge, int nVtx);
+
+    inline int commons(std::vector<int> &a, std::list<Graph::Edge *> edges, int u);
+    void rearrange();
+    void reportSubgraph(int r, int s, int index, USGraph &graph, std::unordered_map<int, int> &skeleton_to_nd_tree, std::vector<bool> visited);
+    void bfsHierarchy(std::stack<int> &scs);
+    inline void findRepresentative(int *child);
+    void presentNuclei(int r, int s, USGraph &graph);
 
     std::vector<std::set<Graph::Vid>> rcliques;
     std::vector<std::set<Graph::Vid>> scliques;
