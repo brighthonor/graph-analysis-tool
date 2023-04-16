@@ -11,29 +11,29 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
 
     int max;
     int r = 3, s = 4;
+    bool inadv = false;
     printf("[DEBUG] START...\n");
-    findRSCliques(graph, r, s);
+    findRSCliques(graph, r, s, inadv);
     printf("[DEBUG] findRSCliques Completed...\n");
-    nd(graph, &max);
+    if(inadv) ndInadv(graph, &max);
+    else ndImprosive(graph, &max, r, s);
     printf("[DEBUG] nd Completed...\n");
-
     presentNuclei(r, s, graph);
-
     printf("[DEBUG] presentNuclei Completed...\n");
 
     ///////////////////////DEBUG/////////////////////////
-    printf("[INFO] nd_tree\n");
-    for(auto nd: nd_tree) {
-        printf("[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
-        printf("\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
-        printf("\tvertices: ");
-        for(auto v: nd.vertices_) printf("%d ", v);
-        printf("\n");
-        printf("\tchildren: ");
-        for(auto c: nd.children_) printf("%d ", c);
-        printf("\n");
-        printf("\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
-    }printf("\n");
+//    printf("[INFO] nd_tree\n");
+//    for(auto nd: nd_tree) {
+//        printf("[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
+//        printf("\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
+//        printf("\tvertices: ");
+//        for(auto v: nd.vertices_) printf("%d ", v);
+//        printf("\n");
+//        printf("\tchildren: ");
+//        for(auto c: nd.children_) printf("%d ", c);
+//        printf("\n");
+//        printf("\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
+//    }printf("\n");
     ///////////////////////DEBUG/////////////////////////
 
     return success;
@@ -50,7 +50,7 @@ void NucleusDecomposition::writeToHTMLStat(FILE *fp, bool directed) {
                 <p> s = %lld </p>\
             </h3>\
             ",
-            3, 4);
+            3LL, 4LL);
 }
 
 bool NucleusDecomposition::writeToFileStat(std::string graph_name, bool directed) {
@@ -61,11 +61,11 @@ bool NucleusDecomposition::writeToFileStat(std::string graph_name, bool directed
 
 //////////// Building nBucket ////////////////
 NucleusDecomposition::Naive_Bucket_element::Naive_Bucket_element()
-: next(NULL), prev(NULL)
+: prev(NULL), next(NULL)
 {}
 
 NucleusDecomposition::Naive_Bucket::Naive_Bucket()
-: max_value(0), current_min_value(1), elements(NULL), buckets(NULL), values(NULL), nb_elements(0)
+: buckets(NULL), elements(NULL), nb_elements(0), max_value(0), values(NULL), current_min_value(1)
 {}
 
 NucleusDecomposition::Naive_Bucket::~Naive_Bucket() {
@@ -156,39 +156,67 @@ void NucleusDecomposition::Naive_Bucket::DecVal(int id) {
 //////////// Nucleus Decomposition ////////////
 ///////////////////////////////////////////////
 
-void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s) { // s should be always larger than r
+int NucleusDecomposition::VectorHasher::operator()(const std::vector<Graph::Vid> &V) const {
+    int hash = (int) V.size();
+    for(auto &i: V) {
+        hash ^= (int) ((unsigned) i + 0x9e3779b9 + (hash << 6) + (hash >> 2));
+    }
+    return hash;
+}
+
+void NucleusDecomposition::fill_rcs_to_id() {
+    for(int i=0; i<(int) rcliques.size(); i++) {
+        rcs_to_id.insert({rcliques[i], i});
+    }
+}
+
+void NucleusDecomposition::combination(int sidx, std::vector<Graph::Vid> &chosen, int s, int r, int idx) {
+    if(r==0) {
+        std::vector<Graph::Vid> sortedChosen;
+        sortedChosen.reserve(chosen.size());
+        for(auto &c: chosen) {
+            sortedChosen.push_back(c);
+        }
+        std::sort(sortedChosen.begin(), sortedChosen.end());
+        if(!rcs_to_id.count(sortedChosen)) return;
+        int id = rcs_to_id.at(sortedChosen);
+        scsHasr[id].insert(sidx);
+        rcsIns[sidx].insert(id);
+        return;
+    }
+
+    if(idx==s) return;
+    chosen.push_back(scliques[sidx][idx]);
+    combination(sidx, chosen, s, r-1, idx+1);
+    chosen.pop_back();
+    combination(sidx, chosen, s, r, idx+1);
+}
+
+void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s, bool inadv) { // s should be always larger than r
 
     auto *rclist = new Kclist();
     auto *sclist = new Kclist();
 
-    rcliques = rclist->getAllKCliquesSet(graph, r);
+    rcliques = rclist->getAllKCliques(graph, r, true);
+    fill_rcs_to_id();
+
     printf("[DEBUG] rcliques: %zu...\n", rcliques.size());
-    scliques = sclist->getAllKCliquesSet(graph, s);
+
+    if(!inadv) return;
+
+    scliques = sclist->getAllKCliques(graph, s, true);
     printf("[DEBUG] scliques: %zu...\n", scliques.size());
 
     scsHasr.resize(rcliques.size());
     rcsIns.resize(scliques.size());
 
-    for(int i=0; i<rcliques.size(); i++) {
-        for(int j=0; j<scliques.size(); j++) {
-            auto rc = rcliques[i];
-            auto sc = scliques[j];
-            bool isin = true;
-            for(auto &t: rc) {
-                if(!sc.count(t)) {
-                    isin = false;
-                    break;
-                }
-            }
-            if(isin){
-                scsHasr[i].insert(j);
-                rcsIns[j].insert(i);
-            }
-        }
+    for(int i=0; i<(int) scliques.size(); i++) {
+        std::vector<Graph::Vid> chosen;
+        combination(i, chosen, s, r, 0);
     }
 }
 
-void NucleusDecomposition::nd(USGraph &graph, int *max) {
+void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max) {
     int fc_t = 0;
 
     cid = 0;
@@ -199,8 +227,7 @@ void NucleusDecomposition::nd(USGraph &graph, int *max) {
     Naive_Bucket nBucket;
     nBucket.Initialize(graph.V*graph.V, rcliques.size());
 
-    int id = 0;
-    for(int i=0; i<rcliques.size(); i++) {
+    for(int i=0; i<(int) rcliques.size(); i++) {
         if(scsHasr[i].empty()) {
             K[i] = 0;
             continue;
@@ -211,7 +238,7 @@ void NucleusDecomposition::nd(USGraph &graph, int *max) {
     while(true) {
         int t;
         int val;
-        if(nBucket.PopMin(&t, &val))
+        if(nBucket.PopMin(&t, &val) == -1)
             break;
 
         unassigned.clear();
@@ -223,6 +250,7 @@ void NucleusDecomposition::nd(USGraph &graph, int *max) {
         for(auto scliq: scsHasr[t]) {
             bool nv = true;
             for(auto rc: rcsIns[scliq]) {
+                if(rc==t) continue;
                 if(K[rc]!=-1){
                     nv = false;
                     break;
@@ -250,6 +278,213 @@ void NucleusDecomposition::nd(USGraph &graph, int *max) {
 
     nBucket.Free();
     *max = fc_t;
+
+    printf("[DEBUG] K values: %d\n", *max);
+
+    printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+    for(auto k: K) {
+        printf("%d ", k);
+    } printf("\n||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+
+    buildHierarchy(*max, graph.E, graph.V);
+
+    printf("[DEBUG] bulidHierarchy Completed...\n");
+}
+
+void NucleusDecomposition::fill_conn_deg(snu::USGraph &graph) {
+    degree.clear();
+    degree.resize(graph.V);
+    connected.resize(graph.V);
+    for(auto &v: graph.vertices) {
+        std::vector<bool> conn(graph.V, false);
+        degree[v->id] = (int)v->edges.size();
+        for(auto &w: v->edges) {
+            int from = (int)w->from->id;
+            int to = (int)w->to->id;
+            if(v->id == from) conn[to] = true;
+            else conn[from] = true;
+        }
+        connected[v->id] = conn;
+    }
+}
+
+int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s) {
+    if(r==s) return 1;
+    int ret = 0;
+    int smallest = -1, minD = INT32_MAX;
+    for(auto &v: clique) {
+        if(degree[v] < minD) {
+            smallest = v;
+            minD = degree[v];
+        }
+    }
+    for(auto &v: graph.id_to_vertex[smallest]->edges) {
+        int from = (int) v->from->id;
+        int to = (int) v->to->id;
+        int check = (smallest==from) ? to : from;
+
+        if(std::find(clique.begin(), clique.end(), check) != clique.end()) continue;
+
+        bool canadd = true;
+        for(auto &u: clique) {
+            if(!connected[check][u]){
+                canadd = false;
+                break;
+            }
+        }
+        if(canadd){
+            clique.push_back(check);
+            ret += count_scliques(graph, clique, r+1, s);
+            clique.pop_back();
+        }
+    }
+    return ret;
+}
+
+void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result) {
+    if(r==s) {
+        std::vector<Graph::Vid> sorted;
+        sorted.reserve(clique.size());
+        for(auto c: clique) {
+            sorted.push_back(c);
+        }
+        std::sort(sorted.begin(), sorted.end());
+        result.push_back(sorted);
+        return;
+    }
+    int smallest = -1, minD = INT32_MAX;
+    for(auto &v: clique) {
+        if(degree[v] < minD) {
+            smallest = v;
+            minD = degree[v];
+        }
+    }
+    for(auto &v: graph.id_to_vertex[smallest]->edges) {
+        int from = (int) v->from->id;
+        int to = (int) v->to->id;
+        int check = (smallest==from) ? to : from;
+
+        if(std::find(clique.begin(), clique.end(), check) != clique.end()) continue;
+
+        bool canadd = true;
+        for(auto &u: clique) {
+            if(!connected[check][u]){
+                canadd = false;
+                break;
+            }
+        }
+        if(canadd){
+            clique.push_back(check);
+            get_scliques_rnow(graph, clique, r+1, s, result);
+            clique.pop_back();
+        }
+    }
+}
+
+void NucleusDecomposition::find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::vector<Graph::Vid> &chosen, int r, int s, int idx, std::set<int> &result) {
+    if(r==0) {
+        std::vector<Graph::Vid> sortedChosen;
+        sortedChosen.reserve(chosen.size());
+        for(auto &c: chosen) {
+            sortedChosen.push_back(c);
+        }
+        std::sort(sortedChosen.begin(), sortedChosen.end());
+        if(!rcs_to_id.count(sortedChosen)) return;
+        int id = rcs_to_id.at(sortedChosen);
+        result.insert(id);
+        return;
+    }
+
+    if(idx==s) return;
+    chosen.push_back(sclique[idx]);
+    find_rc_in_sc(sclique, chosen, r-1, s, idx+1, result);
+    chosen.pop_back();
+    find_rc_in_sc(sclique, chosen, r, s, idx+1, result);
+}
+
+void NucleusDecomposition::ndImprosive(snu::USGraph &graph, int *max, int r, int s) {
+    int fc_t = 0;
+
+    cid = 0;
+    nSubcores = 0;
+    component.resize(rcliques.size(), -1);
+
+    K.resize(rcliques.size(), -1);
+    Naive_Bucket nBucket;
+    nBucket.Initialize(graph.V*graph.V, rcliques.size());
+
+    fill_conn_deg(graph);
+    std::vector<int> sc_count;
+    sc_count.reserve(rcliques.size());
+    for(auto &rc: rcliques) {
+        sc_count.push_back(count_scliques(graph, rc, r, s));
+    }
+
+    for(int i=0; i<(int) rcliques.size(); i++) {
+        if(sc_count[i] == 0) {
+            K[i] = 0;
+            continue;
+        }
+        nBucket.Insert(i, sc_count[i]);
+    }
+
+    while(true) {
+        int t;
+        int val;
+        if(nBucket.PopMin(&t, &val))
+            break;
+
+        unassigned.clear();
+        subcore sc (val);
+        skeleton.push_back(sc);
+
+        fc_t = K[t] = val;
+
+        std::vector<std::vector<Graph::Vid>> scs_has_r_now;
+        get_scliques_rnow(graph, rcliques[t], r, s, scs_has_r_now);
+
+        for(auto scliq: scs_has_r_now) {
+            std::set<int> rcs;
+            std::vector<Graph::Vid> chosen;
+            find_rc_in_sc(scliq, chosen, r, s, 0, rcs);
+
+            bool nv = true;
+            for(auto rc: rcs) {
+                if(rc==t) continue;
+                if(K[rc]!=-1){
+                    nv = false;
+                    break;
+                }
+            }
+
+            if(nv) {
+                for(auto rc: rcs) {
+                    if(rc==t) continue;
+                    if(nBucket.CurrentValue(rc) > fc_t)
+                        nBucket.DecVal(rc);
+                }
+            }
+            else {
+                rcs.erase(t);
+                createSkeleton(t, rcs);
+                rcs.insert(t);
+            }
+        }
+
+        updateUnassigned(t);
+    }
+
+    printf("[DEBUG] while loop completed...\n");
+
+    nBucket.Free();
+    *max = fc_t;
+
+    printf("[DEBUG] K values: %d\n", *max);
+
+    printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
+    for(auto k: K) {
+        printf("%d ", k);
+    } printf("\n||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
     buildHierarchy(*max, graph.E, graph.V);
 
@@ -362,11 +597,11 @@ void NucleusDecomposition::buildHierarchy(int cn, int nEdge, int nVtx) {
     }
 
     // process binnedRelations in reverse order
-    for (int i = binnedRelations.size() - 1; i >= 0; i--) {
+    for (int i = (int) binnedRelations.size() - 1; i >= 0; i--) {
         std::vector<std::pair<int, int>> mergeList;
-        for (int j = 0; j < binnedRelations[i].size(); j++) { // each binnedRelations[i] has K of skeleton[b].K
-            int a = binnedRelations[i][j].first;
-            int root = binnedRelations[i][j].second;
+        for (auto & j : binnedRelations[i]) { // each binnedRelations[i] has K of skeleton[b].K
+            int a = j.first;
+            int root = j.second;
             assignToRoot (&root);
             if (a != root) {
                 if (skeleton[a].K < skeleton[root].K) {
@@ -398,14 +633,14 @@ void NucleusDecomposition::buildHierarchy(int cn, int nEdge, int nVtx) {
         }
     }
 
-    nSubcores += skeleton.size();
+    nSubcores += (int) skeleton.size();
 
     // root core
-    int nid = skeleton.size();
+    int nid = (int) skeleton.size();
     subcore sc (0);
-    for (size_t i = 0; i < skeleton.size(); i++)
-        if (skeleton[i].parent == -1)
-            skeleton[i].parent = nid;
+    for (auto & i : skeleton)
+        if (i.parent == -1)
+            i.parent = nid;
 
     sc.size = nVtx;
     sc.nEdge = nEdge;
@@ -420,16 +655,16 @@ void NucleusDecomposition::buildHierarchy(int cn, int nEdge, int nVtx) {
 inline int NucleusDecomposition::commons(std::vector<int> &a, std::list<Graph::Edge *> edges, int u) {
     std::vector<int> b;
     for(auto edge: edges) {
-        int from = edge->from->id;
-        int to = edge->to->id;
-        if(from==u) b.push_back(to);
-        else b.push_back(from);
+        auto from = edge->from->id;
+        auto to = edge->to->id;
+        if(from==u) b.push_back((int) to);
+        else b.push_back((int) from);
     }
     std::sort(b.begin(), b.end());
 
     int i = 0, j = 0;
     int count = 0;
-    while(i<a.size() && j<b.size()) {
+    while(i<(int)a.size() && j<(int)b.size()) {
         if(a[i]<b[j]) i++;
         else if(a[i]>b[j]) j++;
         else {
@@ -441,8 +676,8 @@ inline int NucleusDecomposition::commons(std::vector<int> &a, std::list<Graph::E
 }
 
 void NucleusDecomposition::rearrange() {
-    for(size_t i=0; i<skeleton.size(); i++) {
-        skeleton[i].children.clear();
+    for(auto & i : skeleton) {
+        i.children.clear();
     }
     for(size_t i=0; i<skeleton.size()-1; i++) {
         if(skeleton[i].visible) {
@@ -459,8 +694,8 @@ void NucleusDecomposition::reportSubgraph(int r, int s, int index, USGraph &grap
                                           std::unordered_map<int, int> &skeleton_to_nd_tree,
                                           std::vector<bool> visited) {
     if(skeleton[index].parent != -1 && skeleton[index].K == 0) {
-        skeleton[index].size = graph.V;
-        skeleton[index].nEdge = graph.E;
+        skeleton[index].size = (int) graph.V;
+        skeleton[index].nEdge = (int) graph.E;
         skeleton[index].ed = 0;
         return;
     }
@@ -468,11 +703,11 @@ void NucleusDecomposition::reportSubgraph(int r, int s, int index, USGraph &grap
     std::fill(visited.begin(), visited.end(), false);
 
     std::vector<int> vset;
-    for(int i=0; i<component.size(); i++) {
+    for(int i=0; i<(int)component.size(); i++) {
         if(component[i] == index) {
             for(auto j: rcliques[i]) {
                 if(!visited[j]) {
-                    vset.push_back(j);
+                    vset.push_back((int) j);
                     visited[j] = true;
                 }
             }
@@ -525,7 +760,7 @@ void NucleusDecomposition::reportSubgraph(int r, int s, int index, USGraph &grap
 void NucleusDecomposition::bfsHierarchy(std::stack<int> &scs) {
     rearrange();
     std::queue<int> bfsorder;
-    bfsorder.push(skeleton.size()-1);
+    bfsorder.push((int) skeleton.size()-1);
     while(!bfsorder.empty()) {
         int s = bfsorder.front();
         bfsorder.pop();
@@ -550,15 +785,15 @@ inline void NucleusDecomposition::findRepresentative(int *child) {
 
 void NucleusDecomposition::presentNuclei(int r, int s, USGraph &graph) {
     // assign unassigned items to top subcore
-    for(int i=0; i<component.size(); i++) {
+    for(int i=0; i<(int)component.size(); i++) {
         if(component[i]==-1) {
-            component[i] = skeleton.size()-1;
+            component[i] = (int)skeleton.size()-1;
         }
     }
 
     // match each component with its representative
     std::unordered_map<int, int> replace;
-    for(int i=0; i<skeleton.size(); i++) {
+    for(int i=0; i<(int)skeleton.size(); i++) {
         int sc = i;
         int original = sc;
         findRepresentative(&sc);
@@ -569,9 +804,9 @@ void NucleusDecomposition::presentNuclei(int r, int s, USGraph &graph) {
     }
 
     // each component takes its representative's component number
-    for(int i=0; i<component.size(); i++) {
-        if(replace.find(component[i]) != replace.end()) {
-            component[i] = replace[component[i]];
+    for(int & i : component) {
+        if(replace.find(i) != replace.end()) {
+            i = replace[i];
         }
     }
 

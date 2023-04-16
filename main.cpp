@@ -119,10 +119,10 @@ int main(int argc, char *argv[]) {
     /* -- Add Common Stats To Run (support both directed & undirected) -- */
     common_stats = {
         &basicStat,
-        &connectStat,
-        &eigenCentrality,
-        &closenessCentrality,
-        &betweennessCentrality,
+//        &connectStat,
+//        &eigenCentrality,
+//        &closenessCentrality,
+//        &betweennessCentrality,
     };
 
     /* -- Add Directed Stats To Run -- */
@@ -130,8 +130,8 @@ int main(int argc, char *argv[]) {
 
     /* -- Add Undirected Stats To Run -- */
     undirected_only_stats = {
-        &countStat,
-        &biconnectedComponents,
+//        &countStat,
+//        &biconnectedComponents,
         &kclist,
         &nucleusDecomposition,
     };
@@ -165,12 +165,12 @@ int main(int argc, char *argv[]) {
         /* -- Set Undirected Html Order Here -- */
         html_order = {
             &basicStat,
-            &connectStat,
-            &eigenCentrality,
-            &biconnectedComponents,
-            &closenessCentrality,
-            &betweennessCentrality,
-            &countStat,
+//            &connectStat,
+//            &eigenCentrality,
+//            &biconnectedComponents,
+//            &closenessCentrality,
+//            &betweennessCentrality,
+//            &countStat,
             &kclist,
             &nucleusDecomposition,
         };

@@ -3,8 +3,10 @@
 
 #include <vector>
 #include <set>
+#include <map>
 #include <stack>
 #include <queue>
+#include <algorithm>
 #include "kclist.h"
 #include "stat.h"
 
@@ -19,8 +21,21 @@ class NucleusDecomposition : public UndirectedStat {
     virtual bool writeToFileStat(std::string graph_name, bool directed) override;
 
    private:
-    void nd(USGraph &graph, int *max);
-    void findRSCliques(USGraph &graph, int r, int s);
+    void findRSCliques(USGraph &graph, int r, int s, bool inadv);
+
+    // for all
+    void fill_rcs_to_id();
+
+    // for Improsive
+    void ndImprosive(USGraph &graph, int *max, int r, int s);
+    void fill_conn_deg(USGraph &graph);
+    int count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s);
+    void get_scliques_rnow(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result);
+    void find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::vector<Graph::Vid> &chosen, int r, int s, int idx, std::set<int> &result);
+
+    // for inAdv
+    void ndInadv(USGraph &graph, int *max);
+    void combination(int sidx, std::vector<Graph::Vid> &chosen, int s, int r, int idx);
 
     // nd tree
     struct nd_tree_node {
@@ -83,6 +98,10 @@ class NucleusDecomposition : public UndirectedStat {
         }
     };
 
+    struct VectorHasher {
+        int operator()(const std::vector<Graph::Vid> &V) const;
+    };
+
     void assignToRoot(int *ch);
     void assignToRepresentative(int *ch);
     void store(int uComp, int vComp);
@@ -98,10 +117,19 @@ class NucleusDecomposition : public UndirectedStat {
     inline void findRepresentative(int *child);
     void presentNuclei(int r, int s, USGraph &graph);
 
-    std::vector<std::set<Graph::Vid>> rcliques;
-    std::vector<std::set<Graph::Vid>> scliques;
+    std::vector<std::vector<Graph::Vid>> rcliques;
+    std::vector<std::vector<Graph::Vid>> scliques;
+
+    // for improsive
+    std::vector<int> degree;
+    std::vector<std::vector<bool>> connected;
+    std::vector<unsigned> idx_to_vid;
+    std::unordered_map<Graph::Vid, unsigned> vid_to_idx;
+
+    // for inAdv
     std::vector<std::set<int>> scsHasr;
     std::vector<std::set<int>> rcsIns;
+    std::unordered_map<std::vector<Graph::Vid>, int, VectorHasher> rcs_to_id;
 
     int cid;
     std::vector<subcore> skeleton;
