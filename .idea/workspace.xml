@@ -24,12 +24,8 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="134d201f-182f-4fb5-b915-b0daee736dfc" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/sample-data/facebook_combined.snap" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/graph-analysis-tool.iml" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/nucleusdecomposition.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/nucleusdecomposition.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/nucleusdecomposition.h" beforeDir="false" afterPath="$PROJECT_DIR$/nucleusdecomposition.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/sample-data/lollipop-us.snap" beforeDir="false" afterPath="$PROJECT_DIR$/sample-data/lollipop-us.snap" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -152,7 +148,7 @@
       <workItem from="1679968627958" duration="3671000" />
       <workItem from="1680462954095" duration="2678000" />
       <workItem from="1680862750341" duration="3205000" />
-      <workItem from="1681549597090" duration="11343000" />
+      <workItem from="1681549597090" duration="11766000" />
     </task>
     <servers />
   </component>

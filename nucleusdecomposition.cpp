@@ -10,7 +10,7 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
     bool success = true;
 
     int max;
-    int r = 2, s = 3;
+    int r = 3, s = 4;
     printf("[DEBUG] START...\n");
     findRSCliques(graph, r, s);
     printf("[DEBUG] findRSCliques Completed...\n");
