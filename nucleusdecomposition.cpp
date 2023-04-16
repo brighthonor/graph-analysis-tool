@@ -11,14 +11,14 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
 
     int max;
     int r = 3, s = 4;
-    bool inadv = false;
+    bool inadv = true;
     printf("[DEBUG] START...\n");
     findRSCliques(graph, r, s, inadv);
     printf("[DEBUG] findRSCliques Completed...\n");
     if(inadv) ndInadv(graph, &max);
     else ndImprosive(graph, &max, r, s);
     printf("[DEBUG] nd Completed...\n");
-    presentNuclei(r, s, graph);
+//    presentNuclei(r, s, graph);
     printf("[DEBUG] presentNuclei Completed...\n");
 
     ///////////////////////DEBUG/////////////////////////
@@ -281,11 +281,6 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max) {
 
     printf("[DEBUG] K values: %d\n", *max);
 
-    printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
-    for(auto k: K) {
-        printf("%d ", k);
-    } printf("\n||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
-
     buildHierarchy(*max, graph.E, graph.V);
 
     printf("[DEBUG] bulidHierarchy Completed...\n");
@@ -480,11 +475,6 @@ void NucleusDecomposition::ndImprosive(snu::USGraph &graph, int *max, int r, int
     *max = fc_t;
 
     printf("[DEBUG] K values: %d\n", *max);
-
-    printf("||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
-    for(auto k: K) {
-        printf("%d ", k);
-    } printf("\n||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||");
 
     buildHierarchy(*max, graph.E, graph.V);
 
