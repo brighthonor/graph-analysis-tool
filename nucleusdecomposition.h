@@ -27,8 +27,9 @@ class NucleusDecomposition : public UndirectedStat {
     void fill_rcs_to_id();
 
     // for Improsive
-    void ndImprosive(USGraph &graph, int *max, int r, int s);
+    void ndWing(snu::USGraph &graph, int *max, int r, int s);
     void fill_conn_deg(USGraph &graph);
+    void fill_edge_umap(USGraph &graph);
     int count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s);
     void get_scliques_rnow(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result);
     void find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::vector<Graph::Vid> &chosen, int r, int s, int idx, std::set<int> &result);
@@ -121,10 +122,9 @@ class NucleusDecomposition : public UndirectedStat {
     std::vector<std::vector<Graph::Vid>> scliques;
 
     // for improsive
-    std::vector<int> degree;
-    std::vector<std::vector<bool>> connected;
-    std::vector<unsigned> idx_to_vid;
-    std::unordered_map<Graph::Vid, unsigned> vid_to_idx;
+    std::unordered_map<Graph::Vid, Graph::Vid> degree;
+    std::unordered_map<Graph::Vid, std::unordered_set<Graph::Vid>> edge_umap;
+    std::unordered_map<Graph::Vid, std::unordered_map<Graph::Vid, bool>> conn;
 
     // for inAdv
     std::vector<std::set<int>> scsHasr;

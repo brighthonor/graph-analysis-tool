@@ -10,13 +10,13 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
     bool success = true;
 
     int max;
-    int r = 3, s = 4;
-    bool inadv = true;
+    int r = 4, s = 5;
+    bool inadv = false;
     printf("[DEBUG] START...\n");
     findRSCliques(graph, r, s, inadv);
     printf("[DEBUG] findRSCliques Completed...\n");
     if(inadv) ndInadv(graph, &max);
-    else ndImprosive(graph, &max, r, s);
+    else ndWing(graph, &max, r, s);
     printf("[DEBUG] nd Completed...\n");
 //    presentNuclei(r, s, graph);
     printf("[DEBUG] presentNuclei Completed...\n");
@@ -179,7 +179,7 @@ void NucleusDecomposition::combination(int sidx, std::vector<Graph::Vid> &chosen
         }
         std::sort(sortedChosen.begin(), sortedChosen.end());
         if(!rcs_to_id.count(sortedChosen)) return;
-        int id = rcs_to_id.at(sortedChosen);
+        int id = rcs_to_id[sortedChosen];
         scsHasr[id].insert(sidx);
         rcsIns[sidx].insert(id);
         return;
@@ -287,23 +287,36 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max) {
 }
 
 void NucleusDecomposition::fill_conn_deg(snu::USGraph &graph) {
-    degree.clear();
-    degree.resize(graph.V);
-    connected.resize(graph.V);
     for(auto &v: graph.vertices) {
-        std::vector<bool> conn(graph.V, false);
+        degree[v->id] = (int)v->edges.size();
+        for(auto &w: graph.vertices) {
+            if(v==w) continue;
+            conn[v->id].insert({w->id, false});
+        }
+        for(auto &w: v->edges) {
+            int from = (int)w->from->id;
+            int to = (int)w->to->id;
+            if(v->id == from) conn[v->id][to] = true;
+            else conn[v->id][from] = true;
+        }
+    }
+}
+
+void NucleusDecomposition::fill_edge_umap(snu::USGraph &graph) {
+
+    for(auto &v: graph.vertices) {
         degree[v->id] = (int)v->edges.size();
         for(auto &w: v->edges) {
             int from = (int)w->from->id;
             int to = (int)w->to->id;
-            if(v->id == from) conn[to] = true;
-            else conn[from] = true;
+            if(v->id == from) edge_umap[v->id].insert(to);
+            else edge_umap[v->id].insert(from);
         }
-        connected[v->id] = conn;
     }
 }
 
 int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s) {
+
     if(r==s) return 1;
     int ret = 0;
     int smallest = -1, minD = INT32_MAX;
@@ -313,6 +326,7 @@ int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid>
             minD = degree[v];
         }
     }
+
     for(auto &v: graph.id_to_vertex[smallest]->edges) {
         int from = (int) v->from->id;
         int to = (int) v->to->id;
@@ -322,10 +336,14 @@ int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid>
 
         bool canadd = true;
         for(auto &u: clique) {
-            if(!connected[check][u]){
+            if(!conn[check][u]){
                 canadd = false;
                 break;
             }
+//            if(!edge_umap[check].count(u)) {
+//                canadd = false;
+//                break;
+//            }
         }
         if(canadd){
             clique.push_back(check);
@@ -363,10 +381,14 @@ void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Gr
 
         bool canadd = true;
         for(auto &u: clique) {
-            if(!connected[check][u]){
+            if(!conn[check][u]){
                 canadd = false;
                 break;
             }
+//            if(!edge_umap[check].count(u)) {
+//                canadd = false;
+//                break;
+//            }
         }
         if(canadd){
             clique.push_back(check);
@@ -385,7 +407,7 @@ void NucleusDecomposition::find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::
         }
         std::sort(sortedChosen.begin(), sortedChosen.end());
         if(!rcs_to_id.count(sortedChosen)) return;
-        int id = rcs_to_id.at(sortedChosen);
+        int id = rcs_to_id[sortedChosen];
         result.insert(id);
         return;
     }
@@ -397,7 +419,7 @@ void NucleusDecomposition::find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::
     find_rc_in_sc(sclique, chosen, r, s, idx+1, result);
 }
 
-void NucleusDecomposition::ndImprosive(snu::USGraph &graph, int *max, int r, int s) {
+void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
     int fc_t = 0;
 
     cid = 0;
@@ -408,7 +430,13 @@ void NucleusDecomposition::ndImprosive(snu::USGraph &graph, int *max, int r, int
     Naive_Bucket nBucket;
     nBucket.Initialize(graph.V*graph.V, rcliques.size());
 
+    printf("[DEBUG] Bucket Initialize Completed...\n");
+
     fill_conn_deg(graph);
+//    fill_edge_umap(graph);
+
+    printf("[DEBUG] Fill Edge Unordered map Completed...\n");
+
     std::vector<int> sc_count;
     sc_count.reserve(rcliques.size());
     for(auto &rc: rcliques) {
@@ -422,6 +450,8 @@ void NucleusDecomposition::ndImprosive(snu::USGraph &graph, int *max, int r, int
         }
         nBucket.Insert(i, sc_count[i]);
     }
+
+    printf("[DEBUG] Bucket Insertion Completed...\n");
 
     while(true) {
         int t;
