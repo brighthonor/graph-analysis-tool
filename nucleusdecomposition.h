@@ -30,12 +30,13 @@ class NucleusDecomposition : public UndirectedStat {
     void ndWing(snu::USGraph &graph, int *max, int r, int s);
     void fill_conn_deg(USGraph &graph);
     void fill_edge_umap(USGraph &graph);
-    int count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s);
-    void get_scliques_rnow(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result);
+    int count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, Graph::Vid maxNew);
+    void get_scliques_rnow(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result, Graph::Vid maxNew);
     void find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::vector<Graph::Vid> &chosen, int r, int s, int idx, std::set<int> &result);
+    int calculate_combination(int s, int r);
 
     // for inAdv
-    void ndInadv(USGraph &graph, int *max);
+    void ndInadv(USGraph &graph, int *max, int r, int s);
     void combination(int sidx, std::vector<Graph::Vid> &chosen, int s, int r, int idx);
 
     // nd tree
@@ -111,7 +112,7 @@ class NucleusDecomposition : public UndirectedStat {
     void updateUnassigned(int t);
     void buildHierarchy(int cn, int nEdge, int nVtx);
 
-    inline int commons(std::vector<int> &a, std::list<Graph::Edge *> edges, int u);
+    inline int commons(std::vector<int> &a, std::list<Graph::Edge *> edges, unsigned int u);
     void rearrange();
     void reportSubgraph(int r, int s, int index, USGraph &graph, std::unordered_map<int, int> &skeleton_to_nd_tree, std::vector<bool> visited);
     void bfsHierarchy(std::stack<int> &scs);
@@ -125,6 +126,9 @@ class NucleusDecomposition : public UndirectedStat {
     std::unordered_map<Graph::Vid, Graph::Vid> degree;
     std::unordered_map<Graph::Vid, std::unordered_set<Graph::Vid>> edge_umap;
     std::unordered_map<Graph::Vid, std::unordered_map<Graph::Vid, bool>> conn;
+
+    std::vector<unsigned> r_idx_to_vid;
+    std::unordered_map<Graph::Vid, unsigned> r_vid_to_idx;
 
     // for inAdv
     std::vector<std::set<int>> scsHasr;

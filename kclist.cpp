@@ -16,6 +16,16 @@ std::string Kclist::statName() {
 
 std::vector<std::vector<Graph::Vid>> Kclist::getAllKCliques(USGraph &graph, unsigned k, bool vid) {
     createVidIndex(graph);
+
+    if(k==1) {
+        for(size_t i = 0;  i<graph.V; i++) {
+            std::vector<Graph::Vid> v;
+            v.push_back(i);
+            cliques.push_back(v);
+        }
+        return cliques;
+    }
+
     ordCore(graph);
     reLabel(graph);
 

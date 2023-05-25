@@ -10,30 +10,30 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
     bool success = true;
 
     int max;
-    int r = 4, s = 5;
-    bool inadv = false;
+    int r = 1, s = 5;
+    bool inadv = true;
     printf("[DEBUG] START...\n");
     findRSCliques(graph, r, s, inadv);
     printf("[DEBUG] findRSCliques Completed...\n");
-    if(inadv) ndInadv(graph, &max);
+    if(inadv) ndInadv(graph, &max, r, s);
     else ndWing(graph, &max, r, s);
     printf("[DEBUG] nd Completed...\n");
-//    presentNuclei(r, s, graph);
+    // presentNuclei(r, s, graph);
     printf("[DEBUG] presentNuclei Completed...\n");
 
     ///////////////////////DEBUG/////////////////////////
-//    printf("[INFO] nd_tree\n");
-//    for(auto nd: nd_tree) {
-//        printf("[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
-//        printf("\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
-//        printf("\tvertices: ");
-//        for(auto v: nd.vertices_) printf("%d ", v);
-//        printf("\n");
-//        printf("\tchildren: ");
-//        for(auto c: nd.children_) printf("%d ", c);
-//        printf("\n");
-//        printf("\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
-//    }printf("\n");
+    // printf("[INFO] nd_tree\n");
+    // for(auto nd: nd_tree) {
+    //     printf("[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
+    //     printf("\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
+    //     printf("\tvertices: ");
+    //     for(auto v: nd.vertices_) printf("%d ", v);
+    //     printf("\n");
+    //     printf("\tchildren: ");
+    //     for(auto c: nd.children_) printf("%d ", c);
+    //     printf("\n");
+    //     printf("\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
+    // }printf("\n");
     ///////////////////////DEBUG/////////////////////////
 
     return success;
@@ -197,14 +197,16 @@ void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s, bool inad
     auto *rclist = new Kclist();
     auto *sclist = new Kclist();
 
-    rcliques = rclist->getAllKCliques(graph, r, true);
+    rcliques = rclist->getAllKCliques(graph, r, false);
+    rclist->rel_idx_and_vid(r_idx_to_vid, r_vid_to_idx);
+
     fill_rcs_to_id();
 
     printf("[DEBUG] rcliques: %zu...\n", rcliques.size());
 
     if(!inadv) return;
 
-    scliques = sclist->getAllKCliques(graph, s, true);
+    scliques = sclist->getAllKCliques(graph, s, false);
     printf("[DEBUG] scliques: %zu...\n", scliques.size());
 
     scsHasr.resize(rcliques.size());
@@ -216,16 +218,20 @@ void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s, bool inad
     }
 }
 
-void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max) {
+void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max, int r, int s) {
     int fc_t = 0;
 
     cid = 0;
     nSubcores = 0;
     component.resize(rcliques.size(), -1);
 
+    printf("component resize finished\n");
+
     K.resize(rcliques.size(), -1);
     Naive_Bucket nBucket;
     nBucket.Initialize(graph.V*graph.V, rcliques.size());
+
+    printf("nBucket initialize finished\n");
 
     for(int i=0; i<(int) rcliques.size(); i++) {
         if(scsHasr[i].empty()) {
@@ -234,6 +240,8 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max) {
         }
         nBucket.Insert(i, scsHasr[i].size());
     }
+
+    printf("nBucket first insertion completed\n");
 
     while(true) {
         int t;
@@ -283,25 +291,28 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max) {
 
     buildHierarchy(*max, graph.E, graph.V);
 
+    printf ("[DEBUG] # subcores: %d\n# subsubcores: %ld\n|V|: %ld\n", nSubcores, skeleton.size(), graph.V);
+
     printf("[DEBUG] bulidHierarchy Completed...\n");
 }
 
 void NucleusDecomposition::fill_conn_deg(snu::USGraph &graph) {
     for(auto &v: graph.vertices) {
-        degree[v->id] = (int)v->edges.size();
+        degree[r_vid_to_idx[v->id]] = (int)v->edges.size();
         for(auto &w: graph.vertices) {
             if(v==w) continue;
-            conn[v->id].insert({w->id, false});
+            conn[r_vid_to_idx[v->id]].insert({r_vid_to_idx[w->id], false});
         }
         for(auto &w: v->edges) {
             int from = (int)w->from->id;
             int to = (int)w->to->id;
-            if(v->id == from) conn[v->id][to] = true;
-            else conn[v->id][from] = true;
+            if(v->id == from) conn[r_vid_to_idx[v->id]][r_vid_to_idx[to]] = true;
+            else conn[r_vid_to_idx[v->id]][r_vid_to_idx[from]] = true;
         }
     }
 }
 
+/* fixing... */
 void NucleusDecomposition::fill_edge_umap(snu::USGraph &graph) {
 
     for(auto &v: graph.vertices) {
@@ -315,7 +326,7 @@ void NucleusDecomposition::fill_edge_umap(snu::USGraph &graph) {
     }
 }
 
-int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s) {
+int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, Graph::Vid maxNew) {
 
     if(r==s) return 1;
     int ret = 0;
@@ -327,12 +338,16 @@ int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid>
         }
     }
 
+    smallest = r_idx_to_vid[smallest];
+
     for(auto &v: graph.id_to_vertex[smallest]->edges) {
         int from = (int) v->from->id;
         int to = (int) v->to->id;
         int check = (smallest==from) ? to : from;
+        check = r_vid_to_idx[check];
 
         if(std::find(clique.begin(), clique.end(), check) != clique.end()) continue;
+        if(check < maxNew) continue;
 
         bool canadd = true;
         for(auto &u: clique) {
@@ -347,14 +362,14 @@ int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid>
         }
         if(canadd){
             clique.push_back(check);
-            ret += count_scliques(graph, clique, r+1, s);
+            ret += count_scliques(graph, clique, r+1, s, check);
             clique.pop_back();
         }
     }
     return ret;
 }
 
-void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result) {
+void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Graph::Vid> &clique, int r, int s, std::vector<std::vector<Graph::Vid>> &result, Graph::Vid maxNew) {
     if(r==s) {
         std::vector<Graph::Vid> sorted;
         sorted.reserve(clique.size());
@@ -372,12 +387,15 @@ void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Gr
             minD = degree[v];
         }
     }
+    smallest = r_idx_to_vid[smallest];
     for(auto &v: graph.id_to_vertex[smallest]->edges) {
         int from = (int) v->from->id;
         int to = (int) v->to->id;
         int check = (smallest==from) ? to : from;
+        check = r_vid_to_idx[check];
 
         if(std::find(clique.begin(), clique.end(), check) != clique.end()) continue;
+        if(check < maxNew) continue;
 
         bool canadd = true;
         for(auto &u: clique) {
@@ -392,7 +410,7 @@ void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Gr
         }
         if(canadd){
             clique.push_back(check);
-            get_scliques_rnow(graph, clique, r+1, s, result);
+            get_scliques_rnow(graph, clique, r+1, s, result, check);
             clique.pop_back();
         }
     }
@@ -419,6 +437,14 @@ void NucleusDecomposition::find_rc_in_sc(std::vector<Graph::Vid> &sclique, std::
     find_rc_in_sc(sclique, chosen, r, s, idx+1, result);
 }
 
+int NucleusDecomposition::calculate_combination(int s, int r) {
+    int result = 1;
+    for(int i=1; i<=s; i++) result *= i;
+    for(int i=1; i<=r; i++) result /= i;
+    for(int i=1; i<=(s-r); i++) result /= i;
+    return result;
+}
+
 void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
     int fc_t = 0;
 
@@ -440,7 +466,8 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
     std::vector<int> sc_count;
     sc_count.reserve(rcliques.size());
     for(auto &rc: rcliques) {
-        sc_count.push_back(count_scliques(graph, rc, r, s));
+        std::unordered_set<Graph::Vid> save;
+        sc_count.push_back(count_scliques(graph, rc, r, s, -1));
     }
 
     for(int i=0; i<(int) rcliques.size(); i++) {
@@ -456,7 +483,7 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
     while(true) {
         int t;
         int val;
-        if(nBucket.PopMin(&t, &val))
+        if(nBucket.PopMin(&t, &val) == -1)
             break;
 
         unassigned.clear();
@@ -466,7 +493,8 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
         fc_t = K[t] = val;
 
         std::vector<std::vector<Graph::Vid>> scs_has_r_now;
-        get_scliques_rnow(graph, rcliques[t], r, s, scs_has_r_now);
+        std::unordered_set<Graph::Vid> save;
+        get_scliques_rnow(graph, rcliques[t], r, s, scs_has_r_now, -1);
 
         for(auto scliq: scs_has_r_now) {
             std::set<int> rcs;
@@ -507,6 +535,8 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
     printf("[DEBUG] K values: %d\n", *max);
 
     buildHierarchy(*max, graph.E, graph.V);
+
+    printf ("[DEBUG] # subcores: %d\n# subsubcores: %ld\n|V|: %ld\n", nSubcores, skeleton.size(), graph.V);
 
     printf("[DEBUG] bulidHierarchy Completed...\n");
 }
@@ -569,7 +599,7 @@ void NucleusDecomposition::merge(int u, int v) {
             skeleton[child].visible = false;
             if (skeleton[parent].rank == skeleton[child].rank)
                 skeleton[parent].rank++;
-            nSubcores--;
+            // nSubcores--;
         }
     }
 }
@@ -672,11 +702,11 @@ void NucleusDecomposition::buildHierarchy(int cn, int nEdge, int nVtx) {
 //////////////// Building Nucleus Functions ////////////////
 ////////////////////////////////////////////////////////////
 
-inline int NucleusDecomposition::commons(std::vector<int> &a, std::list<Graph::Edge *> edges, int u) {
+inline int NucleusDecomposition::commons(std::vector<int> &a, std::list<Graph::Edge *> edges, unsigned int u) {
     std::vector<int> b;
     for(auto edge: edges) {
-        auto from = edge->from->id;
-        auto to = edge->to->id;
+        auto from = r_vid_to_idx[edge->from->id];
+        auto to = r_vid_to_idx[edge->to->id];
         if(from==u) b.push_back((int) to);
         else b.push_back((int) from);
     }
@@ -750,7 +780,7 @@ void NucleusDecomposition::reportSubgraph(int r, int s, int index, USGraph &grap
     // edge density
     int edge_count = 0;
     for(size_t i = 0; i < vset.size(); i++) {
-        edge_count += commons(vset, graph.id_to_vertex[vset[i]]->edges, vset[i]);
+        edge_count += commons(vset, graph.id_to_vertex[r_idx_to_vid[vset[i]]]->edges, vset[i]);
     }
     edge_count /= 2;
 
