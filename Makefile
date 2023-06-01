@@ -1,4 +1,4 @@
-CXX := g++
+CXX := g++-9
 MAIN := main
 MAIN_OBJECTS := main.o graph.o parse.o stat.o basicstat.o connectstat.o biconnected.o eigencentrality.o closenesscentrality.o betweennesscentrality.o kclist.o nucleusdecomposition.o countstat.o makeplot.o html.o statanalyzer.o
 TEST := test

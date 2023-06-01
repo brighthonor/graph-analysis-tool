@@ -1,4 +1,5 @@
 #include <fstream>
+#include <string>
 #include "nucleusdecomposition.h"
 
 namespace snu {
@@ -10,30 +11,37 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
     bool success = true;
 
     int max;
-    int r = 1, s = 5;
+    FILE *fp = fopen("test.txt", "r");
+    int r = 3, s = 4;
     bool inadv = true;
+    char buffer[3];
+    char fileName[200];
+    fread(buffer, sizeof(char), 2, fp);
+    r = atoi(&buffer[0])/10;
+    s = atoi(&buffer[1]);
+    printf("[DEBUG] r: %d, s: %d", r, s);
     printf("[DEBUG] START...\n");
     findRSCliques(graph, r, s, inadv);
     printf("[DEBUG] findRSCliques Completed...\n");
     if(inadv) ndInadv(graph, &max, r, s);
     else ndWing(graph, &max, r, s);
     printf("[DEBUG] nd Completed...\n");
-    // presentNuclei(r, s, graph);
-    printf("[DEBUG] presentNuclei Completed...\n");
 
     ///////////////////////DEBUG/////////////////////////
-    // printf("[INFO] nd_tree\n");
-    // for(auto nd: nd_tree) {
-    //     printf("[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
-    //     printf("\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
-    //     printf("\tvertices: ");
-    //     for(auto v: nd.vertices_) printf("%d ", v);
-    //     printf("\n");
-    //     printf("\tchildren: ");
-    //     for(auto c: nd.children_) printf("%d ", c);
-    //     printf("\n");
-    //     printf("\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
-    // }printf("\n");
+    sprintf(fileName, "nd_result_%d%d.txt", r, s);
+    fp = fopen(fileName, "w");
+    fprintf(fp, "[INFO] nd_tree\n");
+    for(auto nd: nd_tree) {
+        fprintf(fp, "[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
+        fprintf(fp, "\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
+        // printf("\tvertices: ");
+        // for(auto v: nd.vertices_) printf("%d ", v);
+        // printf("\n");
+        // printf("\tchildren: ");
+        // for(auto c: nd.children_) printf("%d ", c);
+        // printf("\n");
+        fprintf(fp, "\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
+    } fprintf(fp, "\n");
     ///////////////////////DEBUG/////////////////////////
 
     return success;
@@ -221,6 +229,14 @@ void NucleusDecomposition::findRSCliques(USGraph &graph, int r, int s, bool inad
 void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max, int r, int s) {
     int fc_t = 0;
 
+    // required for hierarchy
+	int cid; // subcore id number
+	std::vector<subcore> skeleton; // equal K valued cores
+	std::vector<int> component; // subcore ids for each vertex
+	std::vector<std::pair<int, int>> relations;
+	std::vector<int> unassigned;
+	int nSubcores;
+
     cid = 0;
     nSubcores = 0;
     component.resize(rcliques.size(), -1);
@@ -229,7 +245,14 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max, int r, int s) 
 
     K.resize(rcliques.size(), -1);
     Naive_Bucket nBucket;
-    nBucket.Initialize(graph.V*graph.V, rcliques.size());
+
+    int sCliqueMaxNum = 0;
+    for(int i=0; i<(int) rcliques.size(); i++) {
+        if(sCliqueMaxNum < (int) scsHasr[i].size())
+            sCliqueMaxNum = (int) scsHasr[i].size();
+    }
+
+    nBucket.Initialize(sCliqueMaxNum, rcliques.size());
 
     printf("nBucket initialize finished\n");
 
@@ -274,12 +297,12 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max, int r, int s) 
             }
             else {
                 rcsIns[scliq].erase(t);
-                createSkeleton(t, rcsIns[scliq]);
+                createSkeleton(t, rcsIns[scliq], &nSubcores, K, skeleton, component, unassigned, relations);
                 rcsIns[scliq].insert(t);
             }
         }
 
-        updateUnassigned(t);
+        updateUnassigned(t, component, &cid, relations, unassigned);
     }
 
     printf("[DEBUG] while loop completed...\n");
@@ -289,11 +312,15 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max, int r, int s) 
 
     printf("[DEBUG] K values: %d\n", *max);
 
-    buildHierarchy(*max, graph.E, graph.V);
+    buildHierarchy(*max, relations, skeleton, &nSubcores, graph.E, graph.V);
+
+    printf("[DEBUG] bulidHierarchy Completed...\n");
 
     printf ("[DEBUG] # subcores: %d\n# subsubcores: %ld\n|V|: %ld\n", nSubcores, skeleton.size(), graph.V);
 
-    printf("[DEBUG] bulidHierarchy Completed...\n");
+    presentNuclei(r, s, skeleton, component, graph, graph.E, nd_tree);
+
+    printf("[DEBUG] presentNuclei Completed...\n");
 }
 
 void NucleusDecomposition::fill_conn_deg(snu::USGraph &graph) {
@@ -448,13 +475,21 @@ int NucleusDecomposition::calculate_combination(int s, int r) {
 void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
     int fc_t = 0;
 
+    // required for hierarchy
+	int cid; // subcore id number
+	std::vector<subcore> skeleton; // equal K valued cores
+	std::vector<int> component; // subcore ids for each vertex
+	std::vector<std::pair<int, int>> relations;
+	std::vector<int> unassigned;
+	int nSubcores;
+
     cid = 0;
     nSubcores = 0;
     component.resize(rcliques.size(), -1);
 
     K.resize(rcliques.size(), -1);
     Naive_Bucket nBucket;
-    nBucket.Initialize(graph.V*graph.V, rcliques.size());
+    nBucket.Initialize(graph.V * graph.V, rcliques.size());
 
     printf("[DEBUG] Bucket Initialize Completed...\n");
 
@@ -519,12 +554,12 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
             }
             else {
                 rcs.erase(t);
-                createSkeleton(t, rcs);
+                createSkeleton(t, rcs, &nSubcores, K, skeleton, component, unassigned, relations);
                 rcs.insert(t);
             }
         }
 
-        updateUnassigned(t);
+        updateUnassigned(t, component, &cid, relations, unassigned);
     }
 
     printf("[DEBUG] while loop completed...\n");
@@ -534,345 +569,360 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
 
     printf("[DEBUG] K values: %d\n", *max);
 
-    buildHierarchy(*max, graph.E, graph.V);
+    buildHierarchy(*max, relations, skeleton, &nSubcores, graph.E, graph.V);
+
+    printf("[DEBUG] bulidHierarchy Completed...\n");
 
     printf ("[DEBUG] # subcores: %d\n# subsubcores: %ld\n|V|: %ld\n", nSubcores, skeleton.size(), graph.V);
 
-    printf("[DEBUG] bulidHierarchy Completed...\n");
+    presentNuclei(r, s, skeleton, component, graph, graph.E, nd_tree);
+
+    printf("[DEBUG] presentNuclei Completed...\n");
 }
 
 ////////////////////////////////////////////////////////////
 //////////////// Build Hierarchy Functions /////////////////
 ////////////////////////////////////////////////////////////
 
-void NucleusDecomposition::assignToRoot(int *ch) {
+void NucleusDecomposition::assignToRoot(int* ch, std::vector<subcore>& skeleton) {
     std::vector<int> acc;
-    int s = *ch;
-    while(skeleton[s].root != -1) {
-        acc.push_back(s);
-        s = skeleton[s].root;
-    }
-    for(int i: acc)
-        skeleton[i].root = s;
-    *ch = s;
+	int s = *ch;
+	while (skeleton[s].root != -1) {
+		acc.push_back (s);
+		s = skeleton[s].root;
+	}
+	for (int i : acc)
+		skeleton[i].root = s;
+	*ch = s;
 }
 
-void NucleusDecomposition::assignToRepresentative(int *ch) {
+void NucleusDecomposition::assignToRepresentative(int* ch, std::vector<subcore>& skeleton) {
     int u = *ch;
-    std::vector<int> vs;
-    while(skeleton[u].parent != -1) {
-        int n = skeleton[u].parent;
-        if(skeleton[n].K == skeleton[u].K) {
-            vs.push_back(u);
-            u = n;
-        }
-        else break;
-    }
-    *ch = u;
-    for(int i: vs) {
-        if(i != u)
-            skeleton[i].parent = u;
-    }
+	std::vector<int> vs;
+	while (skeleton[u].parent != -1) {
+		int n = skeleton[u].parent;
+		if (skeleton[n].K == skeleton[u].K) {
+			vs.push_back (u);
+			u = n;
+		}
+		else
+			break;
+	}
+	*ch = u;
+	for (int i : vs) {
+		if (i != u)
+			skeleton[i].parent = u;
+	}
 }
 
-void NucleusDecomposition::store(int uComp, int vComp) {
+void NucleusDecomposition::store(int uComp, int vComp, std::vector<int>& unassigned, std::vector<std::pair<int, int> >& relations) {
     std::pair<int, int> c (vComp, uComp);
-    if(uComp == -1)
-        unassigned.push_back(relations.size());
-    relations.push_back(c);
+	if (uComp == -1) // it is possible that u didn't get an id yet
+		unassigned.push_back (relations.size()); // keep those indices to process after the loop, below
+	relations.push_back (c);
 }
 
-void NucleusDecomposition::merge(int u, int v) {
+inline void NucleusDecomposition::merge(int u, int v, std::vector<int>& component, std::vector<subcore>& skeleton, int* nSubcores) {
     if (component[u] == -1) {
-        component[u] = component[v];
-        skeleton.erase (skeleton.end() - 1);
-    }
-    else { // merge component[u] and component[v] nodes
-        int child = component[u];
-        int parent = component[v];
-        assignToRepresentative (&child);
-        assignToRepresentative (&parent);
-        if (child != parent) {
-            if (skeleton[child].rank > skeleton[parent].rank)
-                std::swap(child, parent);
-            skeleton[child].parent = parent;
-            skeleton[child].visible = false;
-            if (skeleton[parent].rank == skeleton[child].rank)
-                skeleton[parent].rank++;
-            // nSubcores--;
-        }
-    }
+		component[u] = component[v];
+		skeleton.erase (skeleton.end() - 1);
+	}
+	else { // merge component[u] and component[v] nodes
+		int child = component[u];
+		int parent = component[v];
+		assignToRepresentative (&child, skeleton);
+		assignToRepresentative (&parent, skeleton);
+		if (child != parent) {
+			if (skeleton[child].rank > skeleton[parent].rank)
+				std::swap (child, parent);
+			skeleton[child].parent = parent;
+			skeleton[child].visible = false;
+			if (skeleton[parent].rank == skeleton[child].rank)
+				skeleton[parent].rank++;
+			*nSubcores--;
+		}
+	}
 }
 
-void NucleusDecomposition::createSkeleton(int u, std::set<int> neighbors) {
+void NucleusDecomposition::createSkeleton(int u, const std::set<int> neighbors, int* nSubcores, std::vector<int>& K, std::vector<subcore>& skeleton,
+		std::vector<int>& component, std::vector<int>& unassigned, std::vector<std::pair<int, int> >& relations) {
     int smallest = -1, minK = INT32_MAX;
-    for(auto i: neighbors) {
-        if(K[i] != -1 && K[i] < minK) {
-            smallest = i;
-            minK = K[i];
-        }
-    }
-    if(smallest==-1) return;
+	for (auto i : neighbors)
+		if (K[i] != -1 && K[i] < minK) {
+			smallest = i;
+			minK = K[i];
+		}
+	if (smallest == -1)
+		return;
 
-    if(K[smallest] == K[u])
-        merge(u, smallest);
-    else
-        store(component[u], component[smallest]);
+	if (K[smallest] == K[u])
+		merge (u, smallest, component, skeleton, nSubcores);
+	else
+		store (component[u], component[smallest], unassigned, relations);
 }
 
-void NucleusDecomposition::updateUnassigned(int t) {
+void NucleusDecomposition::updateUnassigned(int t, std::vector<int>& component, int* cid, std::vector<std::pair<int, int> >& relations, std::vector<int>& unassigned) {
     if (component[t] == -1) { // if e didn't get a component, give her a new one
-        component[t] = cid;
-        cid++;
-    }
+		component[t] = *cid;
+		++(*cid);
+	}
 
-    // update the unassigned components that are in the relations
-    for (int i : unassigned)
-        relations[i] = std::make_pair(relations[i].first, component[t]);
+	// update the unassigned components that are in the relations
+	for (int i : unassigned)
+		relations[i] = std::make_pair (relations[i].first, component[t]);
 }
 
-void NucleusDecomposition::buildHierarchy(int cn, int nEdge, int nVtx) {
+void NucleusDecomposition::buildHierarchy(int cn, std::vector<std::pair<int, int> >& relations, std::vector<subcore>& skeleton, int* nSubcores, int nEdge, int nVtx) {
     // bin the relations w.r.t. first's K
-    std::vector<std::vector<std::pair<int, int>>> binnedRelations (cn + 1);
+	std::vector<std::vector<std::pair<int, int>>> binnedRelations (cn + 1);
 
-    for (auto r : relations) {
-        int a = r.first;
-        int b = r.second;
-        assignToRepresentative (&a);
-        assignToRepresentative (&b);
-        if (a == b)
-            continue;
-        std::pair<int, int> c (a, b);
-        binnedRelations[skeleton[a].K].push_back (c);
-    }
+	for (auto r : relations) {
+		int a = r.first;
+		int b = r.second;
+		assignToRepresentative (&a, skeleton);
+		assignToRepresentative (&b, skeleton);
+		if (a == b)
+			continue;
+		std::pair<int, int> c (a, b);
+		binnedRelations[skeleton[a].K].push_back (c);
+	}
 
-    // process binnedRelations in reverse order
-    for (int i = (int) binnedRelations.size() - 1; i >= 0; i--) {
-        std::vector<std::pair<int, int>> mergeList;
-        for (auto & j : binnedRelations[i]) { // each binnedRelations[i] has K of skeleton[b].K
-            int a = j.first;
-            int root = j.second;
-            assignToRoot (&root);
-            if (a != root) {
-                if (skeleton[a].K < skeleton[root].K) {
-                    skeleton[root].parent = a;
-                    skeleton[root].root = a;
-                }
-                else { // skeleton[root].K == skeleton[a].K
-                    std::pair<int, int> c = (root < a) ? std::make_pair(root, a) : std::make_pair(a, root);
-                    mergeList.push_back (c);
-                }
-            }
-        }
+	// process binnedRelations in reverse order
+	for (int i = binnedRelations.size() - 1; i >= 0; i--) {
+		std::vector<std::pair<int, int>> mergeList;
+		for (int j = 0; j < binnedRelations[i].size(); j++) { // each binnedRelations[i] has K of skeleton[b].K
+			int a = binnedRelations[i][j].first;
+			int root = binnedRelations[i][j].second;
+			assignToRoot (&root, skeleton);
+			if (a != root) {
+				if (skeleton[a].K < skeleton[root].K) {
+					skeleton[root].parent = a;
+					skeleton[root].root = a;
+				}
+				else { // skeleton[root].K == skeleton[a].K
+					std::pair<int, int> c = (root < a) ? std::make_pair (root, a) : std::make_pair (a, root);
+					mergeList.push_back (c);
+				}
+			}
+		}
 
-        // handle merges
-        for (auto sc : mergeList) {
-            int child = sc.first;
-            int parent = sc.second;
-            assignToRepresentative (&child);
-            assignToRepresentative (&parent);
-            if (child != parent) {
-                if (skeleton[child].rank > skeleton[parent].rank)
-                    std::swap(child, parent);
-                skeleton[child].parent = parent;
-                skeleton[child].root = parent;
-                skeleton[child].visible = false;
-                if (skeleton[parent].rank == skeleton[child].rank)
-                    skeleton[parent].rank++;
-            }
-        }
-    }
+		// handle merges
+		for (auto sc : mergeList) {
+			int child = sc.first;
+			int parent = sc.second;
+			assignToRepresentative (&child, skeleton);
+			assignToRepresentative (&parent, skeleton);
+			if (child != parent) {
+				if (skeleton[child].rank > skeleton[parent].rank)
+					std::swap (child, parent);
+				skeleton[child].parent = parent;
+				skeleton[child].root = parent;
+				skeleton[child].visible = false;
+				if (skeleton[parent].rank == skeleton[child].rank)
+					skeleton[parent].rank++;
+			}
+		}
+	}
 
-    nSubcores += (int) skeleton.size();
+	*nSubcores += skeleton.size();
 
-    // root core
-    int nid = (int) skeleton.size();
-    subcore sc (0);
-    for (auto & i : skeleton)
-        if (i.parent == -1)
-            i.parent = nid;
+	// root core
+	int nid = skeleton.size();
+	subcore sc (0);
+	for (size_t i = 0; i < skeleton.size(); i++)
+		if (skeleton[i].parent == -1)
+			skeleton[i].parent = nid;
 
-    sc.size = nVtx;
-    sc.nEdge = nEdge;
-    sc.ed = nEdge / double (nVtx * (nVtx - 1) / 2);
-    skeleton.push_back (sc);
+	sc.size = nVtx;
+	sc.nEdge = nEdge;
+	sc.ed = nEdge / double (nVtx * (nVtx - 1) / 2);
+	skeleton.push_back (sc);
 }
 
 ////////////////////////////////////////////////////////////
 //////////////// Building Nucleus Functions ////////////////
 ////////////////////////////////////////////////////////////
 
-inline int NucleusDecomposition::commons(std::vector<int> &a, std::list<Graph::Edge *> edges, unsigned int u) {
-    std::vector<int> b;
-    for(auto edge: edges) {
-        auto from = r_vid_to_idx[edge->from->id];
-        auto to = r_vid_to_idx[edge->to->id];
-        if(from==u) b.push_back((int) to);
-        else b.push_back((int) from);
-    }
-    std::sort(b.begin(), b.end());
-
+inline int NucleusDecomposition::commons(std::vector<int>& a, std::vector<int>& b) {
     int i = 0, j = 0;
-    int count = 0;
-    while(i<(int)a.size() && j<(int)b.size()) {
-        if(a[i]<b[j]) i++;
-        else if(a[i]>b[j]) j++;
-        else {
-            count++;
-            i++; j++;
-        }
-    }
-    return count;
+	int count = 0;
+	while (i < a.size() && j < b.size()) {
+		if (a[i] < b[j])
+			i++;
+		else if (b[j] < a[i])
+			j++;
+		else {
+			count++;
+			i++;
+			j++;
+		}
+	}
+	return count;
 }
 
-void NucleusDecomposition::rearrange() {
-    for(auto & i : skeleton) {
-        i.children.clear();
-    }
-    for(size_t i=0; i<skeleton.size()-1; i++) {
-        if(skeleton[i].visible) {
-            int pr = skeleton[i].parent;
-            while(!skeleton[i].visible)
-                pr = skeleton[pr].parent;
-            skeleton[i].parent = pr;
-            skeleton[pr].children.push_back(i);
-        }
-    }
+void NucleusDecomposition::rearrange(std::vector<subcore>& skeleton) {
+    for (size_t i = 0; i < skeleton.size(); i++)
+		skeleton[i].children.clear();
+	for (size_t i = 0; i < skeleton.size() - 1; i++) {
+		if (skeleton[i].visible) {
+			int pr = skeleton[i].parent;
+			while (!skeleton[pr].visible)
+				pr = skeleton[pr].parent;
+			skeleton[i].parent = pr;
+			skeleton[pr].children.push_back (i);
+		}
+	}
 }
 
-void NucleusDecomposition::reportSubgraph(int r, int s, int index, USGraph &graph,
-                                          std::unordered_map<int, int> &skeleton_to_nd_tree,
-                                          std::vector<bool> visited) {
-    if(skeleton[index].parent != -1 && skeleton[index].K == 0) {
-        skeleton[index].size = (int) graph.V;
-        skeleton[index].nEdge = (int) graph.E;
-        skeleton[index].ed = 0;
-        return;
-    }
+void NucleusDecomposition::reportSubgraph(int r, int s, int index, std::vector<int>& component, std::vector<subcore>& skeleton, Graph& graph, int nEdge, std::vector<nd_tree_node> &nd_tree,
+					std::unordered_map<int, int> &skeleton_to_nd_tree, std::vector<bool> visited) {
+    if (skeleton[index].parent == -1 && skeleton[index].K == 0) {
+		skeleton[index].size = graph.V;
+		skeleton[index].nEdge = nEdge;
+		skeleton[index].ed = 0;
+		return;
+	}
 
-    std::fill(visited.begin(), visited.end(), false);
+	std::fill(visited.begin(), visited.end(), false);
 
-    std::vector<int> vset;
-    for(int i=0; i<(int)component.size(); i++) {
+	std::vector<int> vset;
+	for(int i=0; i<component.size(); i++) {
         if(component[i] == index) {
             for(auto j: rcliques[i]) {
                 if(!visited[j]) {
-                    vset.push_back((int) j);
+                    vset.push_back(j);
                     visited[j] = true;
                 }
             }
         }
     }
 
-    for(auto child: skeleton[index].children) {
-        int nd_node_id = skeleton_to_nd_tree[child];
+	for (auto child : skeleton[index].children) {
+		int nd_node_id = skeleton_to_nd_tree[child];
 
-        for(auto u: nd_tree[nd_node_id].vertices_) {
-            if(!visited[u]) {
-                vset.push_back(u);
-                visited[u] = true;
-            }
+		for (auto u : nd_tree[nd_node_id].vertices_) {
+			if (!visited[u]) {
+				vset.push_back(u);
+				visited[u] = true;
+			}
+		}
+	}
+
+	std::sort(vset.begin(), vset.end());
+
+	// edge density
+	int edge_count = 0;
+	for (size_t i = 0; i < vset.size(); i++) {
+        std::vector<int> tmp;
+        for(auto t: graph.id_to_vertex[r_idx_to_vid[vset[i]]]->edges) {
+            int from = r_vid_to_idx[t->from->id];
+            int to = r_vid_to_idx[t->to->id];
+            if(vset[i]==from) tmp.push_back(to);
+            else tmp.push_back(from);
         }
+        edge_count += commons (vset, tmp);
     }
 
-    std::sort(vset.begin(), vset.end());
+	edge_count /= 2;
 
-    // edge density
-    int edge_count = 0;
-    for(size_t i = 0; i < vset.size(); i++) {
-        edge_count += commons(vset, graph.id_to_vertex[r_idx_to_vid[vset[i]]]->edges, vset[i]);
-    }
-    edge_count /= 2;
+	double density = 0;
+	if (vset.size() > 1)
+		density = edge_count /(vset.size() * (vset.size() - 1) / 2.0);
 
-    double density = 0;
-    if(vset.size() > 1) {
-        density = edge_count / (vset.size() * (vset.size()-1) / 2.0);
-    }
-
-    nd_tree_node node;
-    node.parent_ = -1;
-    node.k_ = skeleton[index].K;
-    node.r_ = r;
-    node.s_ = s;
-    node.num_edges_ = edge_count;
-    node.density_ = density;
-    node.vertices_ = vset;
-    node.id_ = (int)nd_tree.size();
-    skeleton_to_nd_tree[index] = node.id_;
-    for(auto child: skeleton[index].children) {
-        int node_id = skeleton_to_nd_tree[child];
-        node.children_.push_back(node_id);
-        nd_tree[node_id].parent_ = node.id_;
-    }
-    nd_tree.push_back(node);
+	nd_tree_node node;
+	node.parent_ = -1;
+	node.k_ = skeleton[index].K;
+	node.r_ = r;
+	node.s_ = s;
+	node.num_edges_ = edge_count;
+	node.density_ = density;
+	node.vertices_ = vset;
+	node.id_ = (int)nd_tree.size();
+	skeleton_to_nd_tree[index] = node.id_;
+	for (auto child : skeleton[index].children) {
+		int node_id = skeleton_to_nd_tree[child];
+		node.children_.push_back(node_id);
+		nd_tree[node_id].parent_ = node.id_;
+	}
+	nd_tree.push_back(node);
 }
 
-void NucleusDecomposition::bfsHierarchy(std::stack<int> &scs) {
-    rearrange();
-    std::queue<int> bfsorder;
-    bfsorder.push((int) skeleton.size()-1);
-    while(!bfsorder.empty()) {
-        int s = bfsorder.front();
-        bfsorder.pop();
-        scs.push(s);
-        for(int r: skeleton[s].children)
-            bfsorder.push(r);
-    }
+void NucleusDecomposition::bfsHierarchy(std::vector<subcore>& skeleton, std::stack<int>& scs) {
+    rearrange (skeleton);
+	std::queue<int> bfsorder; // we are doing bfs on the hierarchy tree and push the dequeued nodes to the stack
+	bfsorder.push(skeleton.size() - 1);
+	while (!bfsorder.empty()) {
+		int s = bfsorder.front();
+		bfsorder.pop();
+		scs.push (s);
+		for (int r : skeleton[s].children)
+			bfsorder.push (r);
+	}
 }
 
-inline void NucleusDecomposition::findRepresentative(int *child) {
+inline void NucleusDecomposition::findRepresentative(int* child, std::vector<subcore>& skeleton) {
     int u = *child;
-    if(skeleton[u].parent != -1) {
-        int pr = skeleton[u].parent;
-        while(skeleton[pr].K == skeleton[u].K) {
-            u = pr;
-            if(skeleton[u].parent != -1) pr = skeleton[u].parent;
-            else break;
-        }
-    }
-    *child = u;
+	if (skeleton[u].parent != -1) {
+		int pr = skeleton[u].parent;
+		while (skeleton[u].K == skeleton[pr].K) {
+			u = pr;
+			if (skeleton[u].parent != -1)
+				pr = skeleton[u].parent;
+			else
+				break;
+		}
+	}
+	*child = u;
 }
 
-void NucleusDecomposition::presentNuclei(int r, int s, USGraph &graph) {
+inline void NucleusDecomposition::removeChild(int i, std::vector<subcore> &backup) {
+    if (backup[i].parent != -1) {
+		int pr = backup[i].parent;
+		for (int j = 0; j < (int) backup[pr].children.size(); j++)
+			if (backup[pr].children[j] == i) {
+				backup[pr].children.erase (backup[pr].children.begin() + j);
+				break;
+			}
+	}
+}
+
+void NucleusDecomposition::presentNuclei(int r, int s, std::vector<subcore>& skeleton, std::vector<int>& component, USGraph& graph, int nEdge, std::vector<nd_tree_node> &nd_tree) {
     // assign unassigned items to top subcore
-    for(int i=0; i<(int)component.size(); i++) {
-        if(component[i]==-1) {
-            component[i] = (int)skeleton.size()-1;
-        }
-    }
+	for (int i = 0; i < component.size(); i++)
+		if (component[i] == -1)
+			component[i] = skeleton.size() - 1;
 
-    // match each component with its representative
-    std::unordered_map<int, int> replace;
-    for(int i=0; i<(int)skeleton.size(); i++) {
-        int sc = i;
-        int original = sc;
-        findRepresentative(&sc);
-        if(original != sc) {
-            skeleton[original].visible = false;
-        }
-        replace[original] = sc;
-    }
+	// match each component with its representative
+	std::unordered_map<int, int> replace;
+	for (int i = 0; i < skeleton.size(); i++) {
+		int sc = i;
+		int original = sc;
+		findRepresentative (&sc, skeleton);
+		if (original != sc)
+			skeleton[original].visible = false;
+		replace[original] = sc;
+	}
 
-    // each component takes its representative's component number
-    for(int & i : component) {
-        if(replace.find(i) != replace.end()) {
-            i = replace[i];
-        }
-    }
+	// each component takes its representative's component number
+	for (int i = 0; i < component.size(); i++)
+		if (!replace.count(component[i]))
+			component[i] = replace[component[i]];
 
-    // Rebuild the tree by skipping the invisible nodes and visit the tree by the bottom-up order.
-    std::stack<int> subcoreStack;
-    bfsHierarchy(subcoreStack);
+	std::stack<int> subcoreStack;
+	bfsHierarchy (skeleton, subcoreStack);
 
-    std::vector<bool> visited(graph.V);
-    std::unordered_map<int, int> skeleton_to_nd_tree;
-    while(!subcoreStack.empty()) {
-        int i = subcoreStack.top();
-        subcoreStack.pop();
-        if(skeleton[i].visible) {
-            reportSubgraph(r, s, i, graph, skeleton_to_nd_tree, visited);
-        }
-    }
+	std::vector<bool> visited(graph.V);
+	std::unordered_map<int, int> skeleton_to_nd_tree;
+
+	while (!subcoreStack.empty()) {
+		int i = subcoreStack.top();
+		subcoreStack.pop();
+		if (skeleton[i].visible) {
+			reportSubgraph (r, s, i, component, skeleton, graph, nEdge, nd_tree, skeleton_to_nd_tree, visited);
+		}
+	}
+
+	printf("[DEBUG] skeleton length: %d\n", skeleton.size());
 }
 
 } // namespace snu

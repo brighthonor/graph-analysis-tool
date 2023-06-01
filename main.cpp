@@ -144,42 +144,42 @@ int main(int argc, char *argv[]) {
     analyzer.run();
 
     // plot
-    auto t = std::chrono::high_resolution_clock::now();
-    snu::Plot plot(graph_name);
-    snu::makePlot(graph, plot);
-    printElapsedTime("makePlot()", t);
+    // auto t = std::chrono::high_resolution_clock::now();
+    // snu::Plot plot(graph_name);
+    // snu::makePlot(graph, plot);
+    // printElapsedTime("makePlot()", t);
 
     // write to HTML
-    FILE *fp = snu::openHtml(graph_name.c_str(), directed);
-    std::vector<snu::Stat *> html_order;
-    if (directed) {
-        /* -- Set Directed Html Order Here -- */
-        html_order = {
-            &basicStat,
-            &connectStat,
-            &eigenCentrality,
-            &closenessCentrality,
-            &betweennessCentrality,
-        };
-    } else {
-        /* -- Set Undirected Html Order Here -- */
-        html_order = {
-            &basicStat,
-//            &connectStat,
-//            &eigenCentrality,
-//            &biconnectedComponents,
-//            &closenessCentrality,
-//            &betweennessCentrality,
-//            &countStat,
-            &kclist,
-            &nucleusDecomposition,
-        };
-    }
-    for (auto stat : html_order) {
-        snu::addStatToHtml(fp, stat, directed);
-    }
-    snu::closeHtml(fp, plot);
-    printElapsedTime("Make HTML", t);
+//     FILE *fp = snu::openHtml(graph_name.c_str(), directed);
+//     std::vector<snu::Stat *> html_order;
+//     if (directed) {
+//         /* -- Set Directed Html Order Here -- */
+//         html_order = {
+//             &basicStat,
+//             &connectStat,
+//             &eigenCentrality,
+//             &closenessCentrality,
+//             &betweennessCentrality,
+//         };
+//     } else {
+//         /* -- Set Undirected Html Order Here -- */
+//         html_order = {
+//             &basicStat,
+// //            &connectStat,
+// //            &eigenCentrality,
+// //            &biconnectedComponents,
+// //            &closenessCentrality,
+// //            &betweennessCentrality,
+// //            &countStat,
+//             &kclist,
+//             &nucleusDecomposition,
+//         };
+//     }
+//     for (auto stat : html_order) {
+//         snu::addStatToHtml(fp, stat, directed);
+//     }
+//     snu::closeHtml(fp, plot);
+//     printElapsedTime("Make HTML", t);
 
     return 0;
 }

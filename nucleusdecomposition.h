@@ -104,20 +104,23 @@ class NucleusDecomposition : public UndirectedStat {
         int operator()(const std::vector<Graph::Vid> &V) const;
     };
 
-    void assignToRoot(int *ch);
-    void assignToRepresentative(int *ch);
-    void store(int uComp, int vComp);
-    void merge(int u, int v);
-    void createSkeleton(int u, std::set<int> neighbors);
-    void updateUnassigned(int t);
-    void buildHierarchy(int cn, int nEdge, int nVtx);
+    void assignToRoot(int* ch, std::vector<subcore>& skeleton);
+    void assignToRepresentative(int* ch, std::vector<subcore>& skeleton);
+    void store(int uComp, int vComp, std::vector<int>& unassigned, std::vector<std::pair<int, int> >& relations);
+    void merge(int u, int v, std::vector<int>& component, std::vector<subcore>& skeleton, int* nSubcores);
+    void createSkeleton(int u, const std::set<int> neighbors, int* nSubcores, std::vector<int>& K, std::vector<subcore>& skeleton,
+		std::vector<int>& component, std::vector<int>& unassigned, std::vector<std::pair<int, int> >& relations);
+    void updateUnassigned(int t, std::vector<int>& component, int* cid, std::vector<std::pair<int, int> >& relations, std::vector<int>& unassigned);
+    void buildHierarchy(int cn, std::vector<std::pair<int, int> >& relations, std::vector<subcore>& skeleton, int* nSubcores, int nEdge, int nVtx);
 
-    inline int commons(std::vector<int> &a, std::list<Graph::Edge *> edges, unsigned int u);
-    void rearrange();
-    void reportSubgraph(int r, int s, int index, USGraph &graph, std::unordered_map<int, int> &skeleton_to_nd_tree, std::vector<bool> visited);
-    void bfsHierarchy(std::stack<int> &scs);
-    inline void findRepresentative(int *child);
-    void presentNuclei(int r, int s, USGraph &graph);
+    inline int commons(std::vector<int>& a, std::vector<int>& b);
+    void rearrange(std::vector<subcore>& skeleton);
+    void reportSubgraph(int r, int s, int index, std::vector<int>& component, std::vector<subcore>& skeleton, Graph& graph, int nEdge, std::vector<nd_tree_node> &nd_tree,
+					std::unordered_map<int, int> &skeleton_to_nd_tree, std::vector<bool> visited);
+    inline void removeChild(int i, std::vector<subcore> &backup);
+    void bfsHierarchy(std::vector<subcore>& skeleton, std::stack<int>& scs);
+    inline void findRepresentative(int* child, std::vector<subcore>& skeleton);
+    void presentNuclei(int r, int s, std::vector<subcore>& skeleton, std::vector<int>& component, USGraph& graph, int nEdge, std::vector<nd_tree_node> &nd_tree);
 
     std::vector<std::vector<Graph::Vid>> rcliques;
     std::vector<std::vector<Graph::Vid>> scliques;
@@ -134,13 +137,6 @@ class NucleusDecomposition : public UndirectedStat {
     std::vector<std::set<int>> scsHasr;
     std::vector<std::set<int>> rcsIns;
     std::unordered_map<std::vector<Graph::Vid>, int, VectorHasher> rcs_to_id;
-
-    int cid;
-    std::vector<subcore> skeleton;
-    std::vector<int> component;
-    std::vector<std::pair<int, int>> relations;
-    std::vector<int> unassigned;
-    int nSubcores;
 
     std::vector<int> K;
     std::vector<nd_tree_node> nd_tree;
