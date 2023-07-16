@@ -1,5 +1,6 @@
 #include <fstream>
 #include <string>
+#include <chrono>
 #include "nucleusdecomposition.h"
 
 namespace snu {
@@ -11,37 +12,46 @@ bool NucleusDecomposition::calculateUndirectedStat(USGraph &graph, bool verify) 
     bool success = true;
 
     int max;
-    FILE *fp = fopen("test.txt", "r");
-    int r = 3, s = 4;
-    bool inadv = true;
+    int r, s;
+    bool inadv = false;
     char buffer[3];
     char fileName[200];
+
+    // test.txt -> r, s
+    FILE *fp = fopen("test.txt", "r");
     fread(buffer, sizeof(char), 2, fp);
+    printf("[DEBUG] test.txt : %s\n", buffer);
     r = atoi(&buffer[0])/10;
     s = atoi(&buffer[1]);
-    printf("[DEBUG] r: %d, s: %d", r, s);
+    printf("[DEBUG] r: %d, s: %d\n", r, s);
+
+    // nd start
     printf("[DEBUG] START...\n");
+
     findRSCliques(graph, r, s, inadv);
+
     printf("[DEBUG] findRSCliques Completed...\n");
+
     if(inadv) ndInadv(graph, &max, r, s);
     else ndWing(graph, &max, r, s);
+
     printf("[DEBUG] nd Completed...\n");
 
     ///////////////////////DEBUG/////////////////////////
-    sprintf(fileName, "nd_result_%d%d.txt", r, s);
-    fp = fopen(fileName, "w");
-    fprintf(fp, "[INFO] nd_tree\n");
-    for(auto nd: nd_tree) {
-        fprintf(fp, "[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
-        fprintf(fp, "\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
-        // printf("\tvertices: ");
-        // for(auto v: nd.vertices_) printf("%d ", v);
-        // printf("\n");
-        // printf("\tchildren: ");
-        // for(auto c: nd.children_) printf("%d ", c);
-        // printf("\n");
-        fprintf(fp, "\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
-    } fprintf(fp, "\n");
+    // sprintf(fileName, "nd_result_%d%d.txt", r, s);
+    // fp = fopen(fileName, "w");
+    // fprintf(fp, "[INFO] nd_tree\n");
+    // for(auto nd: nd_tree) {
+    //     fprintf(fp, "[#%d nd_tree]\n\tparent: %d\n", nd.id_, nd.parent_);
+    //     fprintf(fp, "\tk: %d, r: %d, s: %d\n", nd.k_, nd.r_, nd.s_);
+    //     // printf("\tvertices: ");
+    //     // for(auto v: nd.vertices_) printf("%d ", v);
+    //     // printf("\n");
+    //     // printf("\tchildren: ");
+    //     // for(auto c: nd.children_) printf("%d ", c);
+    //     // printf("\n");
+    //     fprintf(fp, "\t# of edges: %d, edge density: %f\n", nd.num_edges_, nd.density_);
+    // } fprintf(fp, "\n");
     ///////////////////////DEBUG/////////////////////////
 
     return success;
@@ -323,23 +333,6 @@ void NucleusDecomposition::ndInadv(snu::USGraph &graph, int *max, int r, int s) 
     printf("[DEBUG] presentNuclei Completed...\n");
 }
 
-void NucleusDecomposition::fill_conn_deg(snu::USGraph &graph) {
-    for(auto &v: graph.vertices) {
-        degree[r_vid_to_idx[v->id]] = (int)v->edges.size();
-        for(auto &w: graph.vertices) {
-            if(v==w) continue;
-            conn[r_vid_to_idx[v->id]].insert({r_vid_to_idx[w->id], false});
-        }
-        for(auto &w: v->edges) {
-            int from = (int)w->from->id;
-            int to = (int)w->to->id;
-            if(v->id == from) conn[r_vid_to_idx[v->id]][r_vid_to_idx[to]] = true;
-            else conn[r_vid_to_idx[v->id]][r_vid_to_idx[from]] = true;
-        }
-    }
-}
-
-/* fixing... */
 void NucleusDecomposition::fill_edge_umap(snu::USGraph &graph) {
 
     for(auto &v: graph.vertices) {
@@ -378,14 +371,10 @@ int NucleusDecomposition::count_scliques(USGraph &graph, std::vector<Graph::Vid>
 
         bool canadd = true;
         for(auto &u: clique) {
-            if(!conn[check][u]){
+            if(!edge_umap[check].count(u)) {
                 canadd = false;
                 break;
             }
-//            if(!edge_umap[check].count(u)) {
-//                canadd = false;
-//                break;
-//            }
         }
         if(canadd){
             clique.push_back(check);
@@ -426,14 +415,10 @@ void NucleusDecomposition::get_scliques_rnow(snu::USGraph &graph, std::vector<Gr
 
         bool canadd = true;
         for(auto &u: clique) {
-            if(!conn[check][u]){
+            if(!edge_umap[check].count(u)) {
                 canadd = false;
                 break;
             }
-//            if(!edge_umap[check].count(u)) {
-//                canadd = false;
-//                break;
-//            }
         }
         if(canadd){
             clique.push_back(check);
@@ -493,8 +478,11 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
 
     printf("[DEBUG] Bucket Initialize Completed...\n");
 
-    fill_conn_deg(graph);
-//    fill_edge_umap(graph);
+    auto start = std::chrono::high_resolution_clock::now();
+    fill_edge_umap(graph);
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+    printf("[DEBUG] TIME : fill_edge_umap - %dms\n", duration);
 
     printf("[DEBUG] Fill Edge Unordered map Completed...\n");
 
@@ -521,9 +509,9 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
         if(nBucket.PopMin(&t, &val) == -1)
             break;
 
-        unassigned.clear();
-        subcore sc (val);
-        skeleton.push_back(sc);
+        // unassigned.clear();
+        // subcore sc (val);
+        // skeleton.push_back(sc);
 
         fc_t = K[t] = val;
 
@@ -553,29 +541,29 @@ void NucleusDecomposition::ndWing(snu::USGraph &graph, int *max, int r, int s) {
                 }
             }
             else {
-                rcs.erase(t);
-                createSkeleton(t, rcs, &nSubcores, K, skeleton, component, unassigned, relations);
-                rcs.insert(t);
+                // rcs.erase(t);
+                // createSkeleton(t, rcs, &nSubcores, K, skeleton, component, unassigned, relations);
+                // rcs.insert(t);
             }
         }
 
-        updateUnassigned(t, component, &cid, relations, unassigned);
+        // updateUnassigned(t, component, &cid, relations, unassigned);
     }
 
     printf("[DEBUG] while loop completed...\n");
 
     nBucket.Free();
-    *max = fc_t;
+    // *max = fc_t;
 
-    printf("[DEBUG] K values: %d\n", *max);
+    // printf("[DEBUG] K values: %d\n", *max);
 
-    buildHierarchy(*max, relations, skeleton, &nSubcores, graph.E, graph.V);
+    // buildHierarchy(*max, relations, skeleton, &nSubcores, graph.E, graph.V);
 
     printf("[DEBUG] bulidHierarchy Completed...\n");
 
     printf ("[DEBUG] # subcores: %d\n# subsubcores: %ld\n|V|: %ld\n", nSubcores, skeleton.size(), graph.V);
 
-    presentNuclei(r, s, skeleton, component, graph, graph.E, nd_tree);
+    // presentNuclei(r, s, skeleton, component, graph, graph.E, nd_tree);
 
     printf("[DEBUG] presentNuclei Completed...\n");
 }
